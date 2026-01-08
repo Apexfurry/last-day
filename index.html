@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LAST DAY</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#000;
+  color:#fff;
+  font-family:'Inter',sans-serif;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+/* ---------- PAGE 1 ---------- */
+#trigger{
+  font-family:'Bebas Neue';
+  letter-spacing:.45em;
+  font-size:1.2rem;
+  cursor:pointer;
+  z-index:10;
+}
+
+#circle{
+  position:fixed;
+  inset:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  pointer-events:none;
+}
+
+.poster{
+  position:absolute;
+  width:140px;
+  height:210px;
+  background-size:cover;
+  background-position:center;
+  box-shadow:0 40px 120px rgba(0,0,0,.9);
+  opacity:0;
+  pointer-events:auto;
+}
+
+/* ---------- PAGE 2 ---------- */
+#archive{
+  position:fixed;
+  inset:0;
+  padding:10vh 5vw;
+  display:none;
+  overflow-y:auto;
+  perspective:2000px;
+}
+
+.grid{
+  max-width:1600px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:4vw;
+}
+
+.grid-item{
+  aspect-ratio:2/3;
+  background-size:cover;
+  background-position:center;
+  opacity:0;
+  transform-style:preserve-3d;
+  transition:opacity .3s ease;
+}
+
+/* RETURN */
+#return{
+  position:fixed;
+  top:30px;
+  right:30px;
+  font-family:'Bebas Neue';
+  letter-spacing:.3em;
+  cursor:pointer;
+  opacity:0;
+  pointer-events:none;
+  z-index:200;
+}
+
+/* MUSIC CONTROLS */
+#music-ui{
+  position:fixed;
+  bottom:30px;
+  right:30px;
+  display:none;
+  gap:18px;
+  font-family:'Bebas Neue';
+  letter-spacing:.2em;
+  opacity:.7;
+  cursor:pointer;
+  z-index:300;
+}
+#music-ui span:hover{opacity:1}
+</style>
+</head>
+
+<body>
+
+<audio id="hoverSound" src="assets/audio/og.mp3"></audio>
+
+<div id="trigger">LAST DAY</div>
+<div id="circle"></div>
+
+<div id="archive">
+  <div class="grid" id="grid"></div>
+</div>
+
+<div id="return">RETURN</div>
+
+<div id="music-ui">
+  <span id="prev">⏮</span>
+  <span id="play">▶</span>
+  <span id="next">⏭</span>
+</div>
+
+<script>
+/* ---------------- CONFIG ---------------- */
+const POSTERS=[
+ "game-of-thrones.jpg","peaky-blinders.jpg","breaking-bad.jpg",
+ "godfather.jpg","shawshank.jpg","prestige.jpg","memento.jpg","machinist.jpg"
+];
+
+const TOTAL_TRACKS = 13;
+const TRACKS = Array.from({length:TOTAL_TRACKS},(_,i)=>`assets/audio/track${i+1}.mp3`);
+
+const RADIUS=260, PUSH=40;
+
+/* ---------------- DOM ---------------- */
+const trigger=document.getElementById("trigger");
+const circle=document.getElementById("circle");
+const archive=document.getElementById("archive");
+const grid=document.getElementById("grid");
+const ret=document.getElementById("return");
+const hoverSound=document.getElementById("hoverSound");
+
+const musicUI=document.getElementById("music-ui");
+const playBtn=document.getElementById("play");
+const nextBtn=document.getElementById("next");
+const prevBtn=document.getElementById("prev");
+
+/* ---------------- STATE ---------------- */
+let state=0, items=[];
+let currentTrack=Math.floor(Math.random()*TRACKS.length);
+let playing=false;
+const music=new Audio();
+music.volume=0.5;
+
+/* ---------------- BUILD GRID ---------------- */
+POSTERS.forEach(p=>{
+  const el=document.createElement("div");
+  el.className="grid-item";
+  el.style.backgroundImage=`url(assets/posters/${p})`;
+  grid.appendChild(el);
+});
+
+/* ---------------- MUSIC ---------------- */
+function playTrack(){
+  music.src=TRACKS[currentTrack];
+  music.play();
+  playBtn.textContent="❚❚";
+  playing=true;
+}
+function pauseTrack(){
+  music.pause();
+  playBtn.textContent="▶";
+  playing=false;
+}
+playBtn.onclick=()=>playing?pauseTrack():playTrack();
+nextBtn.onclick=()=>{currentTrack=(currentTrack+1)%TRACKS.length; playTrack();}
+prevBtn.onclick=()=>{currentTrack=(currentTrack-1+TRACKS.length)%TRACKS.length; playTrack();}
+music.onended=()=>nextBtn.click();
+
+/* ---------------- PAGE 1 ---------------- */
+trigger.onclick=()=>{
+  if(state===0) buildCircle();
+  else if(state===1) openArchive();
+};
+
+function buildCircle(){
+  state=1; items=[];
+  POSTERS.forEach((src,i)=>{
+    const el=document.createElement("div");
+    el.className="poster";
+    el.style.backgroundImage=`url(assets/posters/${src})`;
+    circle.appendChild(el);
+    items.push(el);
+
+    const a=(i/POSTERS.length)*Math.PI*2-Math.PI/2;
+    const x=Math.cos(a)*RADIUS;
+    const y=Math.sin(a)*RADIUS;
+    el.dataset.x=x; el.dataset.y=y;
+
+    gsap.set(el,{x:0,y:0,scale:.8,opacity:0});
+    gsap.to(el,{x,y,scale:1,opacity:1,duration:1.4,delay:i*.12});
+
+    el.onmouseenter=()=>{
+      hoverSound.currentTime=0; hoverSound.play();
+      items.forEach(p=>p!==el&&gsap.to(p,{opacity:.2}));
+      gsap.to(el,{x:x*(1+PUSH/RADIUS),y:y*(1+PUSH/RADIUS),scale:1.1});
+    };
+    el.onmouseleave=()=>{
+      items.forEach(p=>gsap.to(p,{opacity:1}));
+      gsap.to(el,{x,y,scale:1});
+    };
+  });
+}
+
+/* ---------------- PAGE 2 ---------------- */
+function openArchive(){
+  state=2;
+  trigger.style.display="none";
+
+  musicUI.style.display="flex";
+  playTrack();
+
+  gsap.to(items,{opacity:0,scale:0,stagger:.05,onComplete:()=>circle.innerHTML=""});
+  archive.style.display="block";
+
+  const gridItems=document.querySelectorAll(".grid-item");
+  gsap.fromTo(gridItems,{y:120,opacity:0},{y:0,opacity:1,stagger:.12});
+
+  enableGrid3D();
+  gsap.to(ret,{opacity:1,pointerEvents:"auto"});
+}
+
+/* RETURN auto-hide on scroll */
+archive.addEventListener("scroll",()=>{
+  if(archive.scrollTop>100){
+    gsap.to(ret,{opacity:0,pointerEvents:"none"});
+  }else{
+    gsap.to(ret,{opacity:1,pointerEvents:"auto"});
+  }
+});
+
+/* ---------------- GRID 3D ---------------- */
+function enableGrid3D(){
+  const gridItems=document.querySelectorAll(".grid-item");
+  gridItems.forEach(item=>{
+    item.onmouseenter=()=>{
+      gridItems.forEach(o=>o!==item&&gsap.to(o,{opacity:.2}));
+      gsap.to(item,{z:180,scale:1.08});
+    };
+    item.onmousemove=e=>{
+      const r=item.getBoundingClientRect();
+      gsap.to(item,{
+        rotateX:-(e.clientY-r.top)/r.height*12+6,
+        rotateY:(e.clientX-r.left)/r.width*12-6
+      });
+    };
+    item.onmouseleave=()=>{
+      gridItems.forEach(o=>gsap.to(o,{opacity:1}));
+      gsap.to(item,{rotateX:0,rotateY:0,z:0,scale:1});
+    };
+  });
+}
+
+/* ---------------- RETURN ---------------- */
+ret.onclick=()=>{
+  archive.style.display="none";
+  music.pause();
+  playing=false;
+  playBtn.textContent="▶";
+  musicUI.style.display="none";
+  trigger.style.display="block";
+  gsap.to(ret,{opacity:0,pointerEvents:"none"});
+  state=0;
+};
+</script>
+
+</body>
+</html>
