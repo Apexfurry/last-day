@@ -212,7 +212,7 @@ function buildCircle(){
 
     el.onmouseenter=()=>{
       hoverSound.currentTime=0; hoverSound.play();
-      items.forEach(p=>p!==el&&gsap.to(p,{opacity:.2}));
+      items.forEach(p=>p!==el&&gsap.to(p,{opacity:0}));
       gsap.to(el,{x:x*(1+PUSH/RADIUS),y:y*(1+PUSH/RADIUS),scale:1.1});
     };
     el.onmouseleave=()=>{
