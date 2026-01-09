@@ -10,6 +10,7 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+
 body{
   background:#000;
   color:#fff;
@@ -46,9 +47,23 @@ body{
   height:210px;
   background-size:cover;
   background-position:center;
-  box-shadow:0 40px 120px rgba(0,0,0,.9);
+  background-repeat:no-repeat;
+  box-shadow:0 40px 120px rgba(0,0,0,.95);
   opacity:0;
   pointer-events:auto;
+  backface-visibility:hidden;
+  transform:translateZ(0);
+  will-change:transform,opacity;
+}
+
+.poster::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size:2px 2px;
+  pointer-events:none;
+  opacity:.15;
 }
 
 /* ---------- PAGE 2 ---------- */
@@ -58,12 +73,60 @@ body{
   padding:10vh 5vw;
   display:none;
   overflow-y:auto;
-  perspective:2000px;
 }
 
+/* SEARCH */
+#search-wrap{
+  position:fixed;
+  top:24px;
+  right:24px;
+  z-index:300;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+#search-icon{
+  font-size:1.2rem;
+  cursor:pointer;
+  opacity:.8;
+}
+
+#search-bar{
+  width:0;
+  overflow:hidden;
+  opacity:0;
+  transition:width .4s ease, opacity .3s ease;
+}
+
+#search-bar.active{
+  width:220px;
+  opacity:1;
+}
+
+#search-input{
+  width:100%;
+  background:transparent;
+  border:none;
+  border-bottom:1px solid #333;
+  color:#fff;
+  font-size:.95rem;
+  outline:none;
+  padding:4px 0;
+}
+
+/* SEARCH RESULTS */
+#search-results{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:20px;
+  margin-top:60px;
+}
+
+/* SAVED GRID */
 .grid{
+  margin-top:100px;
   max-width:1600px;
-  margin:auto;
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:4vw;
@@ -73,16 +136,28 @@ body{
   aspect-ratio:2/3;
   background-size:cover;
   background-position:center;
-  opacity:0;
-  transform-style:preserve-3d;
-  transition:opacity .3s ease;
+  background-repeat:no-repeat;
+  cursor:pointer;
+  backface-visibility:hidden;
+  transform:translateZ(0);
+  will-change:transform,opacity;
+}
+
+.grid-item::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size:2px 2px;
+  pointer-events:none;
+  opacity:.12;
 }
 
 /* RETURN */
 #return{
   position:fixed;
   top:30px;
-  right:30px;
+  left:30px;
   font-family:'Bebas Neue';
   letter-spacing:.3em;
   cursor:pointer;
@@ -90,21 +165,6 @@ body{
   pointer-events:none;
   z-index:200;
 }
-
-/* MUSIC CONTROLS */
-#music-ui{
-  position:fixed;
-  bottom:30px;
-  right:30px;
-  display:none;
-  gap:18px;
-  font-family:'Bebas Neue';
-  letter-spacing:.2em;
-  opacity:.7;
-  cursor:pointer;
-  z-index:300;
-}
-#music-ui span:hover{opacity:1}
 </style>
 </head>
 
@@ -116,173 +176,181 @@ body{
 <div id="circle"></div>
 
 <div id="archive">
+  <div id="search-wrap">
+    <div id="search-icon">🔍</div>
+    <div id="search-bar">
+      <input id="search-input" placeholder="Search movie or series..." />
+    </div>
+  </div>
+
+  <div id="search-results"></div>
   <div class="grid" id="grid"></div>
 </div>
 
 <div id="return">RETURN</div>
 
-<div id="music-ui">
-  <span id="prev">⏮</span>
-  <span id="play">▶</span>
-  <span id="next">⏭</span>
-</div>
-
 <script>
-/* ---------------- CONFIG ---------------- */
-const POSTERS=[
- "game-of-thrones.jpg","peaky-blinders.jpg","breaking-bad.jpg",
- "godfather.jpg","shawshank.jpg","prestige.jpg","memento.jpg","machinist.jpg",
- "aot.jpg","philospher.jpg","secrets.jpg","azkaban.jpg",
- "goblet.jpg","phoenix.jpg","blood.jpg",
- "deathly1.jpg","deathly2.jpg",
-];
+/* ---------- OMDb CONFIG ---------- */
+const OMDB_KEY="a274b977";
+const FALLBACK="https://via.placeholder.com/500x750/000000/FFFFFF?text=NO+POSTER";
+const hiRes=u=>u&&u!=="N/A"?u.replace("_SX300","_SX700"):FALLBACK;
 
-const TOTAL_TRACKS = 13;
-const TRACKS = Array.from({length:TOTAL_TRACKS},(_,i)=>`assets/audio/track${i+1}.mp3`);
-
-const RADIUS=260, PUSH=40;
-
-/* ---------------- DOM ---------------- */
+/* ---------- DOM ---------- */
 const trigger=document.getElementById("trigger");
 const circle=document.getElementById("circle");
 const archive=document.getElementById("archive");
 const grid=document.getElementById("grid");
 const ret=document.getElementById("return");
 const hoverSound=document.getElementById("hoverSound");
+const searchIcon=document.getElementById("search-icon");
+const searchBar=document.getElementById("search-bar");
+const searchInput=document.getElementById("search-input");
+const searchResults=document.getElementById("search-results");
 
-const musicUI=document.getElementById("music-ui");
-const playBtn=document.getElementById("play");
-const nextBtn=document.getElementById("next");
-const prevBtn=document.getElementById("prev");
+/* ---------- STATE ---------- */
+let state=0;
+let circleItems=[];
+let savedMovies=JSON.parse(localStorage.getItem("savedMovies"))||[];
 
-/* ---------------- STATE ---------------- */
-let state=0, items=[];
-let currentTrack=Math.floor(Math.random()*TRACKS.length);
-let playing=false;
-const music=new Audio();
-music.volume=0.5;
-
-/* ---------------- BUILD GRID ---------------- */
-POSTERS.forEach(p=>{
-  const el=document.createElement("div");
-  el.className="grid-item";
-  el.style.backgroundImage=`url(assets/posters/${p})`;
-  grid.appendChild(el);
-});
-
-/* ---------------- MUSIC ---------------- */
-function playTrack(){
-  music.src=TRACKS[currentTrack];
-  music.play();
-  playBtn.textContent="❚❚";
-  playing=true;
-}
-function pauseTrack(){
-  music.pause();
-  playBtn.textContent="▶";
-  playing=false;
-}
-playBtn.onclick=()=>playing?pauseTrack():playTrack();
-nextBtn.onclick=()=>{currentTrack=(currentTrack+1)%TRACKS.length; playTrack();}
-prevBtn.onclick=()=>{currentTrack=(currentTrack-1+TRACKS.length)%TRACKS.length; playTrack();}
-music.onended=()=>nextBtn.click();
-
-/* ---------------- PAGE 1 ---------------- */
-trigger.onclick=()=>{
-  if(state===0) buildCircle();
-  else if(state===1) openArchive();
-};
+/* ---------- CIRCLE ---------- */
+const RADIUS=260;
+const PUSH=40;
 
 function buildCircle(){
-  state=1; items=[];
-  POSTERS.forEach((src,i)=>{
+  circle.innerHTML="";
+  circleItems=[];
+  savedMovies.forEach((m,i)=>{
     const el=document.createElement("div");
     el.className="poster";
-    el.style.backgroundImage=`url(assets/posters/${src})`;
+    el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
     circle.appendChild(el);
-    items.push(el);
+    circleItems.push(el);
 
-    const a=(i/POSTERS.length)*Math.PI*2-Math.PI/2;
+    const a=i/savedMovies.length*Math.PI*2-Math.PI/2;
     const x=Math.cos(a)*RADIUS;
     const y=Math.sin(a)*RADIUS;
-    el.dataset.x=x; el.dataset.y=y;
+    el.dataset.x=x;
+    el.dataset.y=y;
 
     gsap.set(el,{x:0,y:0,scale:.8,opacity:0});
-    gsap.to(el,{x,y,scale:1,opacity:1,duration:1.4,delay:i*.12});
+    gsap.to(el,{x,y,scale:1,opacity:1,duration:1.2,delay:i*.08});
 
     el.onmouseenter=()=>{
-      hoverSound.currentTime=0; hoverSound.play();
-      items.forEach(p=>p!==el&&gsap.to(p,{opacity:0}));
-      gsap.to(el,{x:x*(1+PUSH/RADIUS),y:y*(1+PUSH/RADIUS),scale:1.1});
+      hoverSound.currentTime=0;
+      hoverSound.play();
+      circleItems.forEach(p=>p!==el&&gsap.to(p,{opacity:0}));
+      gsap.to(el,{x:x*1.15,y:y*1.15,scale:1.12});
     };
+
     el.onmouseleave=()=>{
-      items.forEach(p=>gsap.to(p,{opacity:1}));
+      circleItems.forEach(p=>gsap.to(p,{opacity:1}));
       gsap.to(el,{x,y,scale:1});
     };
   });
 }
 
-/* ---------------- PAGE 2 ---------------- */
+/* ---------- PAGE FLOW ---------- */
+trigger.onclick=()=>{
+  if(state===0){ state=1; buildCircle(); }
+  else if(state===1){ openArchive(); }
+};
+
 function openArchive(){
   state=2;
   trigger.style.display="none";
-
-  musicUI.style.display="flex";
-  playTrack();
-
-  gsap.to(items,{opacity:0,scale:0,stagger:.05,onComplete:()=>circle.innerHTML=""});
+  gsap.to(circleItems,{opacity:0,scale:0,onComplete:()=>circle.innerHTML=""});
   archive.style.display="block";
-
-  const gridItems=document.querySelectorAll(".grid-item");
-  gsap.fromTo(gridItems,{y:120,opacity:0},{y:0,opacity:1,stagger:.12});
-
-  enableGrid3D();
   gsap.to(ret,{opacity:1,pointerEvents:"auto"});
+  renderSaved();
 }
 
-/* RETURN auto-hide on scroll */
-archive.addEventListener("scroll",()=>{
-  if(archive.scrollTop>100){
-    gsap.to(ret,{opacity:0,pointerEvents:"none"});
-  }else{
-    gsap.to(ret,{opacity:1,pointerEvents:"auto"});
-  }
-});
+/* ---------- SEARCH ---------- */
+searchIcon.onclick=()=>{
+  searchBar.classList.toggle("active");
+  searchInput.focus();
+};
 
-/* ---------------- GRID 3D ---------------- */
-function enableGrid3D(){
-  const gridItems=document.querySelectorAll(".grid-item");
-  gridItems.forEach(item=>{
-    item.onmouseenter=()=>{
-      gridItems.forEach(o=>o!==item&&gsap.to(o,{opacity:.2}));
-      gsap.to(item,{z:180,scale:1.08});
+let timer;
+searchInput.oninput=()=>{
+  clearTimeout(timer);
+  timer=setTimeout(searchMovies,400);
+};
+
+async function searchMovies(){
+  const q=searchInput.value.trim();
+  if(q.length<2){ searchResults.innerHTML=""; return; }
+
+  const r=await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(q)}`);
+  const d=await r.json();
+
+  searchResults.innerHTML="";
+  if(d.Response==="False") return;
+
+  d.Search.forEach(m=>{
+    const el=document.createElement("div");
+    el.className="grid-item";
+    el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
+    el.onclick=()=>saveMovie(m);
+    searchResults.appendChild(el);
+  });
+}
+
+/* ---------- SAVE / UNSAVE ---------- */
+function saveMovie(movie){
+  if(savedMovies.find(m=>m.imdbID===movie.imdbID)) return;
+  savedMovies.push(movie);
+  localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
+  renderSaved();
+}
+
+function removeMovie(id){
+  savedMovies=savedMovies.filter(m=>m.imdbID!==id);
+  localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
+  renderSaved();
+}
+
+/* ---------- RENDER SAVED ---------- */
+function renderSaved(){
+  grid.innerHTML="";
+  savedMovies.forEach(m=>{
+    const el=document.createElement("div");
+    el.className="grid-item";
+    el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
+
+    el.oncontextmenu=e=>{
+      e.preventDefault();
+      removeMovie(m.imdbID);
     };
-    item.onmousemove=e=>{
-      const r=item.getBoundingClientRect();
-      gsap.to(item,{
-        rotateX:-(e.clientY-r.top)/r.height*12+6,
-        rotateY:(e.clientX-r.left)/r.width*12-6
-      });
+
+    grid.appendChild(el);
+  });
+  enableGridFocus();
+}
+
+/* ---------- GRID FOCUS ---------- */
+function enableGridFocus(){
+  const items=document.querySelectorAll(".grid-item");
+  items.forEach(i=>{
+    i.onmouseenter=()=>{
+      items.forEach(o=>o!==i&&gsap.to(o,{opacity:0}));
+      gsap.to(i,{scale:1.08});
     };
-    item.onmouseleave=()=>{
-      gridItems.forEach(o=>gsap.to(o,{opacity:1}));
-      gsap.to(item,{rotateX:0,rotateY:0,z:0,scale:1});
+    i.onmouseleave=()=>{
+      items.forEach(o=>gsap.to(o,{opacity:1}));
+      gsap.to(i,{scale:1});
     };
   });
 }
 
-/* ---------------- RETURN ---------------- */
+/* ---------- RETURN ---------- */
 ret.onclick=()=>{
   archive.style.display="none";
-  music.pause();
-  playing=false;
-  playBtn.textContent="▶";
-  musicUI.style.display="none";
   trigger.style.display="block";
   gsap.to(ret,{opacity:0,pointerEvents:"none"});
-  state=0;
+  state=1;
+  buildCircle();
 };
 </script>
 
 </body>
-</html>
+</html>  
