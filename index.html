@@ -276,11 +276,31 @@ searchInput.oninput=()=>{
   timer=setTimeout(searchMovies,400);
 };
 
+/* UPDATED SEARCH LOGIC */
 async function searchMovies(){
-  const q=searchInput.value.trim();
-  if(q.length<2){ searchResults.innerHTML=""; return; }
+  let rawQ = searchInput.value.trim();
+  if(rawQ.length<2){ searchResults.innerHTML=""; return; }
 
-  const r=await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(q)}`);
+  // 1. Normalize input to lowercase for better matching
+  let cleanQ = rawQ.toLowerCase();
+
+  // 2. Intelligent Mapping (Aliases for tricky titles)
+  const smartAliases = {
+    "seven": "se7en",
+    "aot": "attack on titan",
+    "got": "game of thrones",
+    "lotr": "lord of the rings",
+    "op": "one piece",
+    "jjk": "jujutsu kaisen",
+    "bb": "breaking bad",
+    "bcs": "better call saul",
+    "himym": "how i met your mother"
+  };
+
+  // 3. Use alias if exists, otherwise use original input
+  const finalQuery = smartAliases[cleanQ] || rawQ;
+
+  const r=await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(finalQuery)}`);
   const d=await r.json();
 
   searchResults.innerHTML="";
@@ -353,4 +373,4 @@ ret.onclick=()=>{
 </script>
 
 </body>
-</html>  
+</html>
