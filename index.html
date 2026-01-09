@@ -277,21 +277,26 @@ function renderResult(m){
   searchResults.appendChild(el);
 }
 
-async function searchMovies(){
-  const q=searchInput.value.trim().toLowerCase();
-  searchResults.innerHTML="";
-  if(!q) return;
-
-  if(classify(q)){
-    const exact=await exactLookup(q);
-    if(exact){ renderResult(exact); return; }
+async function shareMyMovies(){
+  if(savedMovies.length===0){
+    alert("No movies to share");
+    return;
   }
 
-  const r=await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(q)}`);
-  const d=await r.json();
-  if(d.Response==="False") return;
-  d.Search.forEach(renderResult);
+  const id = Math.random().toString(36).substring(2,8);
+
+  await setDoc(doc(db,"shares",id),{
+    movies: savedMovies,
+    createdAt: Date.now()
+  });
+
+  // 🔥 FIX: remove old ?share param
+  const cleanURL = `${location.origin}${location.pathname}?share=${id}`;
+
+  await navigator.clipboard.writeText(cleanURL);
+  alert("Share link copied!");
 }
+
 
 /* ---------- GRID ---------- */
 function enableGridFocus(){
