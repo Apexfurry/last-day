@@ -24,31 +24,23 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // 1. EXPOSE TO GLOBAL WINDOW (So standard scripts can use them)
   window.db = db;
   window.doc = doc;
   window.setDoc = setDoc;
   window.getDoc = getDoc;
 
-  // 2. CHECK FOR SHARED LINK ON LOAD
   const params = new URLSearchParams(location.search);
   const shareId = params.get("share");
 
   if(shareId) {
-    console.log("Found share ID, loading...");
     getDoc(doc(db, "shares", shareId)).then(snap => {
       if(snap.exists()) {
         const movies = snap.data().movies;
-        // Save to local storage
         localStorage.setItem("savedMovies", JSON.stringify(movies));
-        
-        // Clean URL (remove ?share=...)
         window.history.replaceState({}, document.title, window.location.pathname);
-
-        // Tell the main app to update
         if(window.hardRefresh) window.hardRefresh();
       }
-    }).catch(err => console.error("Error loading share:", err));
+    });
   }
 </script>
 
@@ -67,7 +59,6 @@ body{
   align-items:center;
 }
 
-/* ---------- PAGE 1 ---------- */
 #trigger{
   font-family:'Bebas Neue';
   letter-spacing:.45em;
@@ -113,7 +104,6 @@ body{
   opacity:.15;
 }
 
-/* ---------- PAGE 2 ---------- */
 #archive{
   position:fixed;
   inset:0;
@@ -188,7 +178,6 @@ body{
   will-change:transform,opacity;
 }
 
-/* SHARE BTN */
 #share-btn{
   position:fixed;
   bottom:24px;
@@ -261,12 +250,11 @@ let state=0;
 let circleItems=[];
 let savedMovies=[];
 
-// Safe load
 try {
   savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || [];
 } catch(e) { savedMovies = []; }
 
-/* ---------- CIRCLE ---------- */
+/* ---------- CIRCLE (OPTIMIZED) ---------- */
 const RADIUS=260;
 
 function buildCircle(){
@@ -274,14 +262,18 @@ function buildCircle(){
   circleItems=[];
   if(savedMovies.length===0) return;
 
-  savedMovies.forEach((m,i)=>{
+  // 🔥 PERFORMANCE FIX: Only take the last 12 movies for the circle
+  // The full list is still in the archive, but the circle stays light.
+  const visualLimit = savedMovies.slice(-12);
+
+  visualLimit.forEach((m,i)=>{
     const el=document.createElement("div");
     el.className="poster";
     el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
     circle.appendChild(el);
     circleItems.push(el);
 
-    const a=i/savedMovies.length*Math.PI*2-Math.PI/2;
+    const a=i/visualLimit.length*Math.PI*2-Math.PI/2;
     const x=Math.cos(a)*RADIUS;
     const y=Math.sin(a)*RADIUS;
     el.dataset.x=x;
@@ -292,6 +284,7 @@ function buildCircle(){
 
     el.onmouseenter=()=>{
       try{ hoverSound.currentTime=0; hoverSound.play(); }catch(e){}
+      // Animate only the visible circle items
       circleItems.forEach(p=>p!==el&&gsap.to(p,{opacity:0}));
       gsap.to(el,{x:x*1.15,y:y*1.15,scale:1.12});
     };
@@ -325,7 +318,7 @@ function openArchive(){
   }
 }
 
-/* ---------- SEARCH (RESTORED & FIXED) ---------- */
+/* ---------- SEARCH ---------- */
 searchIcon.onclick=()=>{
   searchBar.classList.toggle("active");
   searchInput.focus();
@@ -343,7 +336,6 @@ async function searchMovies(){
 
   let cleanQ = rawQ.toLowerCase();
   
-  // 1. Parsing
   let titleSearch = cleanQ;
   let yearSearch = "";
   const yearMatch = cleanQ.match(/^(.+?)\s+(\d{4})$/);
@@ -352,35 +344,25 @@ async function searchMovies(){
     yearSearch = yearMatch[2];
   }
 
-  // 2. Aliases
   const smartAliases = {
-    "seven": "se7en",
-    "aot": "attack on titan",
-    "got": "game of thrones",
-    "lotr": "lord of the rings",
-    "op": "one piece",
-    "jjk": "jujutsu kaisen",
-    "bb": "breaking bad",
-    "bcs": "better call saul",
-    "himym": "how i met your mother"
+    "seven": "se7en", "aot": "attack on titan", "got": "game of thrones",
+    "lotr": "lord of the rings", "op": "one piece", "jjk": "jujutsu kaisen",
+    "bb": "breaking bad", "bcs": "better call saul", "himym": "how i met your mother"
   };
   titleSearch = smartAliases[titleSearch] || titleSearch;
 
-  // 3. Search
   let url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
   if(yearSearch) url += `&y=${yearSearch}`;
 
   let r = await fetch(url);
   let d = await r.json();
 
-  // 4. Fallback
   if(d.Response === "False" && yearSearch) {
     let fallbackUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
     r = await fetch(fallbackUrl);
     d = await r.json();
   }
 
-  // 5. Render
   searchResults.innerHTML="";
   if(d.Response==="False") return;
 
@@ -399,7 +381,6 @@ function saveMovie(movie){
   savedMovies.push(movie);
   localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
   
-  // Visual feedback
   const items = searchResults.querySelectorAll('.grid-item');
   items.forEach(item => {
       if(item.style.backgroundImage.includes(movie.Poster)) {
@@ -418,6 +399,7 @@ function removeMovie(id){
 /* ---------- RENDER SAVED ---------- */
 function renderSaved(){
   grid.innerHTML="";
+  // Archive shows ALL movies, not just recent ones
   savedMovies.forEach(m=>{
     const el=document.createElement("div");
     el.className="grid-item";
@@ -431,7 +413,6 @@ function renderSaved(){
   enableGridFocus();
 }
 
-/* ---------- GRID FOCUS ---------- */
 function enableGridFocus(){
   const items=document.querySelectorAll(".grid-item");
   items.forEach(i=>{
@@ -446,52 +427,35 @@ function enableGridFocus(){
   });
 }
 
-/* ---------- SHARE FUNCTION (FIXED) ---------- */
+/* ---------- SHARE ---------- */
 async function shareMyMovies(){
-  if(savedMovies.length===0){
-    alert("No movies to share yet.");
-    return;
-  }
-
-  // CHECK FIREBASE AVAILABILITY
-  if(!window.db || !window.setDoc || !window.doc){
-    alert("System loading... please try again in a second.");
-    return;
-  }
+  if(savedMovies.length===0){ alert("No movies to share yet."); return; }
+  if(!window.db || !window.setDoc){ alert("System loading..."); return; }
 
   const id = Math.random().toString(36).substring(2,8);
   const shareBtn = document.getElementById("share-btn");
   shareBtn.innerText = "GENERATING...";
 
   try {
-    // Use window.db, window.doc, window.setDoc (Global Access)
     await window.setDoc(window.doc(window.db,"shares",id), {
       movies: savedMovies,
       createdAt: Date.now()
     });
-
     const link = `${location.origin}${location.pathname}?share=${id}`;
     await navigator.clipboard.writeText(link);
-    
     shareBtn.innerText = "LINK COPIED!";
     setTimeout(() => shareBtn.innerText = "SHARE MY MOVIES", 2000);
   } catch(e) {
-    console.error(e);
     shareBtn.innerText = "ERROR";
-    alert("Share failed. Check console.");
   }
 }
 
-/* ---------- HARD REFRESH HELPER ---------- */
 window.hardRefresh = () => {
   savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || [];
   if(state === 1) buildCircle();
   if(state === 2) renderSaved();
-  // Optional: Visual cue that movies loaded
-  gsap.from("#trigger", {opacity:0, duration:1});
 };
 
-/* ---------- RETURN ---------- */
 ret.onclick=()=>{
   archive.style.display="none";
   trigger.style.display="block";
