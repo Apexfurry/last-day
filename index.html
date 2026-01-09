@@ -127,7 +127,7 @@ body{
 <div id="return">RETURN</div>
 
 <script>
-/* ---------- OMDb CONFIG ---------- */
+/* ---------- CONFIG ---------- */
 const OMDB_KEY="a274b977";
 const FALLBACK="https://via.placeholder.com/500x750/000000/FFFFFF?text=NO+POSTER";
 const hiRes=u=>u&&u!=="N/A"?u.replace("_SX300","_SX700"):FALLBACK;
@@ -149,7 +149,7 @@ let state=0;
 let circleItems=[];
 let savedMovies=JSON.parse(localStorage.getItem("savedMovies"))||[];
 
-/* ---------- SAFE CIRCLE ---------- */
+/* ---------- CIRCLE ---------- */
 const RADIUS=260;
 function buildCircle(){
   circle.innerHTML="";
@@ -169,6 +169,17 @@ function buildCircle(){
 
     gsap.set(el,{x:0,y:0,scale:.8,opacity:0});
     gsap.to(el,{x,y,scale:1,opacity:1,duration:1.2,delay:i*.08});
+
+    el.onmouseenter=()=>{
+      hoverSound.currentTime=0;
+      hoverSound.play();
+      circleItems.forEach(p=>p!==el&&gsap.to(p,{opacity:0}));
+      gsap.to(el,{x:x*1.15,y:y*1.15,scale:1.12});
+    };
+    el.onmouseleave=()=>{
+      circleItems.forEach(p=>gsap.to(p,{opacity:1}));
+      gsap.to(el,{x,y,scale:1});
+    };
   });
 }
 
@@ -177,7 +188,6 @@ trigger.onclick=()=>{
   if(state===0){state=1;buildCircle();}
   else if(state===1) openArchive();
 };
-
 function openArchive(){
   state=2;
   trigger.style.display="none";
@@ -187,22 +197,17 @@ function openArchive(){
   renderSaved();
 }
 
-/* ---------- GOD-TIER SEARCH ---------- */
+/* ---------- SEARCH ---------- */
 searchIcon.onclick=()=>{
   searchBar.classList.toggle("active");
   searchInput.focus();
 };
-
 let timer;
 searchInput.oninput=()=>{
   clearTimeout(timer);
   timer=setTimeout(searchMovies,350);
 };
-
-function classify(q){
-  return q.length<=3 ? "SHORT":"NORMAL";
-}
-
+function classify(q){return q.length<=3;}
 async function exactLookup(title){
   const years=["","2023","2022","2021","2020","2019","2018","2017","2010","2000","1990"];
   for(const y of years){
@@ -212,7 +217,6 @@ async function exactLookup(title){
   }
   return null;
 }
-
 function renderResult(m){
   const el=document.createElement("div");
   el.className="grid-item";
@@ -220,16 +224,14 @@ function renderResult(m){
   el.onclick=()=>saveMovie(m);
   searchResults.appendChild(el);
 }
-
 async function searchMovies(){
   const q=searchInput.value.trim().toLowerCase();
   searchResults.innerHTML="";
   if(!q) return;
 
-  if(classify(q)==="SHORT"){
+  if(classify(q)){
     const exact=await exactLookup(q);
     if(exact){renderResult(exact);return;}
-    return;
   }
 
   const r=await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(q)}`);
@@ -238,14 +240,20 @@ async function searchMovies(){
   d.Search.forEach(renderResult);
 }
 
-/* ---------- SAVE / RENDER ---------- */
-function saveMovie(movie){
-  if(savedMovies.find(m=>m.imdbID===movie.imdbID)) return;
-  savedMovies.push(movie);
-  localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
-  renderSaved();
+/* ---------- GRID ---------- */
+function enableGridFocus(){
+  const items=document.querySelectorAll(".grid-item");
+  items.forEach(i=>{
+    i.onmouseenter=()=>{
+      items.forEach(o=>o!==i&&gsap.to(o,{opacity:0}));
+      gsap.to(i,{scale:1.08});
+    };
+    i.onmouseleave=()=>{
+      items.forEach(o=>gsap.to(o,{opacity:1}));
+      gsap.to(i,{scale:1});
+    };
+  });
 }
-
 function renderSaved(){
   grid.innerHTML="";
   savedMovies.forEach(m=>{
@@ -255,8 +263,14 @@ function renderSaved(){
     el.oncontextmenu=e=>{e.preventDefault();removeMovie(m.imdbID);};
     grid.appendChild(el);
   });
+  enableGridFocus();
 }
-
+function saveMovie(movie){
+  if(savedMovies.find(m=>m.imdbID===movie.imdbID)) return;
+  savedMovies.push(movie);
+  localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
+  renderSaved();
+}
 function removeMovie(id){
   savedMovies=savedMovies.filter(m=>m.imdbID!==id);
   localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
