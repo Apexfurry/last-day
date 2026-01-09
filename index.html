@@ -45,6 +45,7 @@ body{
   box-shadow:0 40px 120px rgba(0,0,0,.95);
   opacity:0;
   pointer-events:auto;
+  will-change:transform,opacity;
 }
 #archive{
   position:fixed;
@@ -127,6 +128,8 @@ body{
 <div id="return">RETURN</div>
 
 <script>
+gsap.defaults({ overwrite: "auto" });
+
 /* ---------- CONFIG ---------- */
 const OMDB_KEY="a274b977";
 const FALLBACK="https://via.placeholder.com/500x750/000000/FFFFFF?text=NO+POSTER";
@@ -151,6 +154,18 @@ let savedMovies=JSON.parse(localStorage.getItem("savedMovies"))||[];
 
 /* ---------- CIRCLE ---------- */
 const RADIUS=260;
+
+function resetCircle(){
+  circleItems.forEach(p=>{
+    gsap.to(p,{
+      opacity:1,
+      scale:1,
+      duration:0.25,
+      ease:"power2.out"
+    });
+  });
+}
+
 function buildCircle(){
   circle.innerHTML="";
   circleItems=[];
@@ -171,14 +186,29 @@ function buildCircle(){
     gsap.to(el,{x,y,scale:1,opacity:1,duration:1.2,delay:i*.08});
 
     el.onmouseenter=()=>{
+      resetCircle();
+
       hoverSound.currentTime=0;
       hoverSound.play();
-      circleItems.forEach(p=>p!==el&&gsap.to(p,{opacity:0}));
-      gsap.to(el,{x:x*1.15,y:y*1.15,scale:1.12});
+
+      circleItems.forEach(p=>{
+        if(p!==el){
+          gsap.to(p,{opacity:0.05,duration:0.25});
+        }
+      });
+
+      gsap.to(el,{
+        x:x*1.15,
+        y:y*1.15,
+        scale:1.12,
+        duration:0.3,
+        ease:"power3.out"
+      });
     };
+
     el.onmouseleave=()=>{
-      circleItems.forEach(p=>gsap.to(p,{opacity:1}));
-      gsap.to(el,{x,y,scale:1});
+      resetCircle();
+      gsap.to(el,{x,y,scale:1,duration:0.3,ease:"power3.out"});
     };
   });
 }
