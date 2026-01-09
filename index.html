@@ -8,6 +8,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
+<!-- FIREBASE (CDN) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCt6s0fVkb7DtQeq9H05wg_D0Lw_S10-0",
+    authDomain: "lastday-18.firebaseapp.com",
+    projectId: "lastday-18",
+    storageBucket: "lastday-18.firebasestorage.app",
+    messagingSenderId: "413600100426",
+    appId: "1:413600100426:web:c55e5c7fd46028a26236b3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.db = db;
+  window.doc = doc;
+  window.setDoc = setDoc;
+  window.getDoc = getDoc;
+</script>
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{
@@ -17,15 +40,15 @@ body{
   width:100vw;
   height:100vh;
   overflow:hidden;
-  display:flex;
-  justify-content:center;
-  align-items:center;
 }
 #trigger{
   font-family:'Bebas Neue';
   letter-spacing:.45em;
   font-size:1.2rem;
   cursor:pointer;
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
   z-index:10;
 }
 #circle{
@@ -43,9 +66,7 @@ body{
   background-size:cover;
   background-position:center;
   box-shadow:0 40px 120px rgba(0,0,0,.95);
-  opacity:0;
   pointer-events:auto;
-  will-change:transform,opacity;
 }
 #archive{
   position:fixed;
@@ -53,6 +74,7 @@ body{
   padding:10vh 5vw;
   display:none;
   overflow-y:auto;
+  background:#000;
 }
 #search-wrap{
   position:fixed;
@@ -94,6 +116,15 @@ body{
   background-position:center;
   cursor:pointer;
 }
+#share-btn{
+  position:fixed;
+  bottom:24px;
+  right:24px;
+  font-family:'Bebas Neue';
+  letter-spacing:.2em;
+  cursor:pointer;
+  z-index:300;
+}
 #return{
   position:fixed;
   top:30px;
@@ -115,20 +146,23 @@ body{
 <div id="circle"></div>
 
 <div id="archive">
+  <!-- SEARCH -->
   <div id="search-wrap">
     <div id="search-icon">🔍</div>
     <div id="search-bar">
       <input id="search-input" placeholder="Search movie or series..." />
     </div>
   </div>
+
   <div id="search-results"></div>
   <div class="grid" id="grid"></div>
 </div>
 
+<div id="share-btn" onclick="shareMyMovies()">SHARE MY MOVIES</div>
 <div id="return">RETURN</div>
 
 <script>
-gsap.defaults({ overwrite: "auto" });
+gsap.defaults({ overwrite:"auto" });
 
 /* ---------- CONFIG ---------- */
 const OMDB_KEY="a274b977";
@@ -151,21 +185,9 @@ const searchResults=document.getElementById("search-results");
 let state=0;
 let circleItems=[];
 let savedMovies=JSON.parse(localStorage.getItem("savedMovies"))||[];
-
-/* ---------- CIRCLE ---------- */
 const RADIUS=260;
 
-function resetCircle(){
-  circleItems.forEach(p=>{
-    gsap.to(p,{
-      opacity:1,
-      scale:1,
-      duration:0.25,
-      ease:"power2.out"
-    });
-  });
-}
-
+/* ---------- CIRCLE ---------- */
 function buildCircle(){
   circle.innerHTML="";
   circleItems=[];
@@ -182,62 +204,61 @@ function buildCircle(){
     const x=Math.cos(a)*RADIUS;
     const y=Math.sin(a)*RADIUS;
 
-    gsap.set(el,{x:0,y:0,scale:.8,opacity:0});
-    gsap.to(el,{x,y,scale:1,opacity:1,duration:1.2,delay:i*.08});
+    gsap.fromTo(el,{x:0,y:0,scale:.8,opacity:0},{
+      x,y,scale:1,opacity:1,duration:1.2,delay:i*.08
+    });
 
     el.onmouseenter=()=>{
-      resetCircle();
-
       hoverSound.currentTime=0;
       hoverSound.play();
-
-      circleItems.forEach(p=>{
-        if(p!==el){
-          gsap.to(p,{opacity:0.05,duration:0.25});
-        }
-      });
-
-      gsap.to(el,{
-        x:x*1.15,
-        y:y*1.15,
-        scale:1.12,
-        duration:0.3,
-        ease:"power3.out"
-      });
+      circleItems.forEach(p=>p!==el&&gsap.to(p,{opacity:0.15}));
+      gsap.to(el,{x:x*1.15,y:y*1.15,scale:1.12});
     };
-
     el.onmouseleave=()=>{
-      resetCircle();
-      gsap.to(el,{x,y,scale:1,duration:0.3,ease:"power3.out"});
+      circleItems.forEach(p=>gsap.to(p,{opacity:1}));
+      gsap.to(el,{x,y,scale:1});
     };
   });
 }
 
 /* ---------- PAGE FLOW ---------- */
 trigger.onclick=()=>{
-  if(state===0){state=1;buildCircle();}
-  else if(state===1) openArchive();
+  if(state===0){
+    state=1;
+    buildCircle();
+  } else if(state===1){
+    state=2;
+    trigger.style.display="none";
+    circle.style.display="none";
+    archive.style.display="block";
+    gsap.to(ret,{opacity:1,pointerEvents:"auto"});
+    renderSaved();
+  }
 };
-function openArchive(){
-  state=2;
-  trigger.style.display="none";
-  gsap.to(circleItems,{opacity:0,scale:0,onComplete:()=>circle.innerHTML=""});
-  archive.style.display="block";
-  gsap.to(ret,{opacity:1,pointerEvents:"auto"});
-  renderSaved();
-}
 
-/* ---------- SEARCH ---------- */
+ret.onclick=()=>{
+  archive.style.display="none";
+  circle.style.display="flex";
+  trigger.style.display="block";
+  gsap.to(ret,{opacity:0,pointerEvents:"none"});
+  state=1;
+  buildCircle();
+};
+
+/* ---------- SEARCH (RESTORED) ---------- */
 searchIcon.onclick=()=>{
   searchBar.classList.toggle("active");
   searchInput.focus();
 };
+
 let timer;
 searchInput.oninput=()=>{
   clearTimeout(timer);
   timer=setTimeout(searchMovies,350);
 };
-function classify(q){return q.length<=3;}
+
+function classify(q){ return q.length<=3; }
+
 async function exactLookup(title){
   const years=["","2023","2022","2021","2020","2019","2018","2017","2010","2000","1990"];
   for(const y of years){
@@ -247,6 +268,7 @@ async function exactLookup(title){
   }
   return null;
 }
+
 function renderResult(m){
   const el=document.createElement("div");
   el.className="grid-item";
@@ -254,6 +276,7 @@ function renderResult(m){
   el.onclick=()=>saveMovie(m);
   searchResults.appendChild(el);
 }
+
 async function searchMovies(){
   const q=searchInput.value.trim().toLowerCase();
   searchResults.innerHTML="";
@@ -261,7 +284,7 @@ async function searchMovies(){
 
   if(classify(q)){
     const exact=await exactLookup(q);
-    if(exact){renderResult(exact);return;}
+    if(exact){ renderResult(exact); return; }
   }
 
   const r=await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(q)}`);
@@ -275,7 +298,7 @@ function enableGridFocus(){
   const items=document.querySelectorAll(".grid-item");
   items.forEach(i=>{
     i.onmouseenter=()=>{
-      items.forEach(o=>o!==i&&gsap.to(o,{opacity:0}));
+      items.forEach(o=>o!==i&&gsap.to(o,{opacity:0.15}));
       gsap.to(i,{scale:1.08});
     };
     i.onmouseleave=()=>{
@@ -284,37 +307,66 @@ function enableGridFocus(){
     };
   });
 }
+
 function renderSaved(){
   grid.innerHTML="";
   savedMovies.forEach(m=>{
     const el=document.createElement("div");
     el.className="grid-item";
     el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
-    el.oncontextmenu=e=>{e.preventDefault();removeMovie(m.imdbID);};
+    el.oncontextmenu=e=>{
+      e.preventDefault();
+      removeMovie(m.imdbID);
+    };
     grid.appendChild(el);
   });
   enableGridFocus();
 }
+
 function saveMovie(movie){
   if(savedMovies.find(m=>m.imdbID===movie.imdbID)) return;
   savedMovies.push(movie);
   localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
   renderSaved();
 }
+
 function removeMovie(id){
   savedMovies=savedMovies.filter(m=>m.imdbID!==id);
   localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
   renderSaved();
 }
 
-/* ---------- RETURN ---------- */
-ret.onclick=()=>{
-  archive.style.display="none";
-  trigger.style.display="block";
-  gsap.to(ret,{opacity:0,pointerEvents:"none"});
-  state=1;
-  buildCircle();
-};
+/* ---------- SHARE ---------- */
+function generateShareId(){
+  return Math.random().toString(36).substring(2,8);
+}
+
+async function shareMyMovies(){
+  if(savedMovies.length===0) return alert("No movies to share");
+
+  const id=generateShareId();
+  await setDoc(doc(db,"shares",id),{
+    movies:savedMovies,
+    createdAt:Date.now()
+  });
+
+  const link=`${location.origin}?share=${id}`;
+  await navigator.clipboard.writeText(link);
+  alert("Share link copied!");
+}
+
+/* ---------- LOAD SHARED ---------- */
+const params=new URLSearchParams(location.search);
+const shareId=params.get("share");
+
+if(shareId){
+  getDoc(doc(db,"shares",shareId)).then(snap=>{
+    if(!snap.exists()) return;
+    savedMovies=snap.data().movies;
+    localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
+    buildCircle();
+  });
+}
 </script>
 
 </body>
