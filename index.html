@@ -262,8 +262,7 @@ function buildCircle(){
   circleItems=[];
   if(savedMovies.length===0) return;
 
-  // 🔥 PERFORMANCE FIX: Only take the last 12 movies for the circle
-  // The full list is still in the archive, but the circle stays light.
+  // Lag Fix: Visual Limit to 12
   const visualLimit = savedMovies.slice(-12);
 
   visualLimit.forEach((m,i)=>{
@@ -284,7 +283,6 @@ function buildCircle(){
 
     el.onmouseenter=()=>{
       try{ hoverSound.currentTime=0; hoverSound.play(); }catch(e){}
-      // Animate only the visible circle items
       circleItems.forEach(p=>p!==el&&gsap.to(p,{opacity:0}));
       gsap.to(el,{x:x*1.15,y:y*1.15,scale:1.12});
     };
@@ -330,9 +328,10 @@ searchInput.oninput=()=>{
   timer=setTimeout(searchMovies,400);
 };
 
+/* --- FIXED SEARCH LOGIC (Handles "Up", "Her", "It") --- */
 async function searchMovies(){
   let rawQ = searchInput.value.trim();
-  if(rawQ.length<2){ searchResults.innerHTML=""; return; }
+  if(rawQ.length<2){ searchResults.innerHTML=""; return; } // Allows "Up", "It"
 
   let cleanQ = rawQ.toLowerCase();
   
@@ -344,27 +343,45 @@ async function searchMovies(){
     yearSearch = yearMatch[2];
   }
 
+  // Aliases
   const smartAliases = {
-    "seven": "se7en", "aot": "attack on titan", "got": "game of thrones",
+    "aot": "attack on titan", "got": "game of thrones",
     "lotr": "lord of the rings", "op": "one piece", "jjk": "jujutsu kaisen",
     "bb": "breaking bad", "bcs": "better call saul", "himym": "how i met your mother"
   };
   titleSearch = smartAliases[titleSearch] || titleSearch;
 
+  // 1. Standard Search (s=)
   let url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
   if(yearSearch) url += `&y=${yearSearch}`;
 
   let r = await fetch(url);
   let d = await r.json();
 
-  if(d.Response === "False" && yearSearch) {
-    let fallbackUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
-    r = await fetch(fallbackUrl);
-    d = await r.json();
+  // 2. Fallback: If "Too many results" or not found, try EXACT lookup (t=)
+  if(d.Response === "False") {
+    // Attempt Exact Title Lookup (Fixes "Up", "Her", "It")
+    let exactUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&t=${encodeURIComponent(titleSearch)}`;
+    if(yearSearch) exactUrl += `&y=${yearSearch}`;
+    
+    let r2 = await fetch(exactUrl);
+    let d2 = await r2.json();
+    
+    if(d2.Response === "True") {
+      // Mock the structure of a search result
+      d = { Response: "True", Search: [d2] };
+    } else {
+       // 3. Last Resort: Try original query without year
+       if(yearSearch) {
+          let fallbackUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
+          let r3 = await fetch(fallbackUrl);
+          d = await r3.json();
+       }
+    }
   }
 
   searchResults.innerHTML="";
-  if(d.Response==="False") return;
+  if(d.Response==="False" || !d.Search) return;
 
   d.Search.forEach(m=>{
     const el=document.createElement("div");
@@ -399,7 +416,6 @@ function removeMovie(id){
 /* ---------- RENDER SAVED ---------- */
 function renderSaved(){
   grid.innerHTML="";
-  // Archive shows ALL movies, not just recent ones
   savedMovies.forEach(m=>{
     const el=document.createElement("div");
     el.className="grid-item";
