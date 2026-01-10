@@ -24,9 +24,9 @@ body{
   transition: border 0.3s;
 }
 
-/* SHARED MODE BORDER */
+/* SHARED MODE STYLES */
 body.is-shared {
-    border: 6px solid #ff0044;
+    /* No border */
 }
 
 #trigger{
@@ -39,7 +39,7 @@ body.is-shared {
   user-select:none;
 }
 
-/* Change Title Color in Shared Mode */
+/* We keep the Title Color Red so you know it's a Shared List */
 body.is-shared #trigger { color: #ff0044; }
 
 #circle{
@@ -200,6 +200,8 @@ body.is-shared #trigger { color: #ff0044; }
   opacity:0.6;
   transition:opacity 0.3s;
   font-size: 1rem;
+  min-width: 60px; /* Prevents layout jump when text changes */
+  text-align: right;
 }
 .control-btn:hover{opacity:1;}
 
@@ -296,7 +298,7 @@ const hoverSound = document.getElementById("hoverSound");
 // Global State
 let state = 0; 
 let savedMovies = []; 
-let circleItems = []; // Needed for effect
+let circleItems = []; 
 let isSharedMode = false; 
 
 /* ---------- INITIALIZATION ---------- */
@@ -412,12 +414,12 @@ function openArchive(){
     }
 }
 
-/* ---------- CIRCLE EFFECTS RESTORED ---------- */
+/* ---------- CIRCLE EFFECTS ---------- */
 const RADIUS=260;
 
 function buildCircle(){
     circle.innerHTML="";
-    circleItems = []; // Reset array
+    circleItems = [];
     if(savedMovies.length===0) return;
     const limit = savedMovies.slice(-12);
 
@@ -426,7 +428,7 @@ function buildCircle(){
         el.className="poster";
         el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
         circle.appendChild(el);
-        circleItems.push(el); // Add to tracking array
+        circleItems.push(el);
         
         const a=i/limit.length*Math.PI*2-Math.PI/2;
         const x=Math.cos(a)*RADIUS;
@@ -437,27 +439,23 @@ function buildCircle(){
         gsap.set(el,{x:0,y:0,scale:.8,opacity:0});
         gsap.to(el,{x,y,scale:1,opacity:1,duration:1.2,delay:i*.08});
         
-        // --- RESTORED HOVER EFFECT ---
         el.onmouseenter=()=>{
             try{ hoverSound.currentTime=0; hoverSound.play(); }catch(e){}
-            // Dim others
+            // Completely hide others (opacity 0)
             circleItems.forEach(p => {
-                if(p !== el) gsap.to(p, {opacity: 0.15, duration: 0.3});
+                if(p !== el) gsap.to(p, {opacity: 0, duration: 0.3});
             });
-            // Scale active
             gsap.to(el, {x:x*1.15, y:y*1.15, scale:1.12, duration: 0.4});
         };
         
         el.onmouseleave=()=>{
-            // Restore others
             circleItems.forEach(p => gsap.to(p, {opacity: 1, duration: 0.3}));
-            // Restore active
             gsap.to(el, {x, y, scale: 1, duration: 0.4});
         };
     });
 }
 
-/* ---------- GRID EFFECTS RESTORED ---------- */
+/* ---------- GRID EFFECTS ---------- */
 function renderSaved(){
     grid.innerHTML="";
     savedMovies.forEach(m=>{
@@ -473,27 +471,25 @@ function renderSaved(){
         }
         grid.appendChild(el);
     });
-    enableGridFocus(); // ACTIVATE EFFECTS
+    enableGridFocus();
 }
 
 function enableGridFocus(){
   const items=document.querySelectorAll(".grid-item");
   items.forEach(i=>{
     i.onmouseenter=()=>{
-      // Dim others
-      items.forEach(o=>o!==i&&gsap.to(o,{opacity:0.2, duration:0.3}));
-      // Scale active
+      // Completely hide others (opacity 0)
+      items.forEach(o=>o!==i&&gsap.to(o,{opacity:0, duration:0.3}));
       gsap.to(i,{scale:1.08, duration:0.3});
     };
     i.onmouseleave=()=>{
-      // Restore all
       items.forEach(o=>gsap.to(o,{opacity:1, duration:0.3}));
       gsap.to(i,{scale:1, duration:0.3});
     };
   });
 }
 
-/* ---------- SEARCH & SAVE ---------- */
+/* ---------- SEARCH ---------- */
 searchIcon.onclick=()=>{
   if(isSharedMode) return;
   searchBar.classList.toggle("active");
@@ -534,7 +530,6 @@ async function searchMovies(){
   let r = await fetch(url);
   let d = await r.json();
 
-  // Fallback Logic
   if(d.Response === "False") {
     let exactUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&t=${encodeURIComponent(titleSearch)}`;
     if(yearSearch) exactUrl += `&y=${yearSearch}`;
@@ -561,8 +556,6 @@ async function searchMovies(){
     el.onclick=()=>saveMovie(m); 
     searchResults.appendChild(el);
   });
-  
-  // Re-enable focus for search results too
   enableGridFocus();
 }
 
@@ -585,27 +578,52 @@ function removeMovie(id){
     renderSaved();
 }
 
-/* ---------- BUTTON ACTIONS ---------- */
+/* ---------- BUTTONS (FIXED: NO POPUPS) ---------- */
 shareBtn.onclick = async () => {
-    if(!window.db) return alert("Loading...");
+    // 1. If System is loading
+    if(!window.db) {
+        shareBtn.innerText = "LOADING...";
+        setTimeout(() => shareBtn.innerText = "SHARE", 1000);
+        return;
+    }
     
+    // 2. If Viewing Shared List (Just Copy Current URL)
     if(isSharedMode) {
         await navigator.clipboard.writeText(location.href);
-        alert("Link Copied!");
+        const originalText = shareBtn.innerText;
+        shareBtn.innerText = "LINK COPIED";
+        setTimeout(() => shareBtn.innerText = originalText, 2000);
         return;
     }
 
-    if(savedMovies.length===0) return alert("List is empty.");
+    // 3. Normal Share
+    if(savedMovies.length===0) {
+        shareBtn.innerText = "EMPTY";
+        setTimeout(() => shareBtn.innerText = "SHARE", 1000);
+        return;
+    }
     
-    const id = Math.random().toString(36).substring(2,8);
-    await window.setDoc(window.doc(window.db,"shares",id), {
-        movies: savedMovies,
-        createdAt: Date.now()
-    });
+    shareBtn.innerText = "GENERATING...";
     
-    const link = `${location.origin}${location.pathname}?view=${id}`;
-    await navigator.clipboard.writeText(link);
-    alert("Share Link Copied!");
+    try {
+        const id = Math.random().toString(36).substring(2,8);
+        await window.setDoc(window.doc(window.db,"shares",id), {
+            movies: savedMovies,
+            createdAt: Date.now()
+        });
+        
+        const link = `${location.origin}${location.pathname}?view=${id}`;
+        await navigator.clipboard.writeText(link);
+        
+        // NO ALERT -> JUST BUTTON CHANGE
+        shareBtn.innerText = "LINK COPIED";
+        setTimeout(() => shareBtn.innerText = "SHARE", 2000);
+        
+    } catch(e) {
+        console.error(e);
+        shareBtn.innerText = "ERROR";
+        setTimeout(() => shareBtn.innerText = "SHARE", 2000);
+    }
 };
 
 importBtn.onclick = () => {
@@ -622,8 +640,12 @@ importBtn.onclick = () => {
         );
         
         localStorage.setItem("savedMovies", JSON.stringify(unique));
-        alert("Imported Successfully!");
-        exitSharedMode();
+        
+        // Visual Feedback on Button
+        importBtn.innerText = "IMPORTED";
+        setTimeout(() => {
+             exitSharedMode();
+        }, 800);
     }
 };
 </script>
