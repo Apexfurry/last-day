@@ -29,16 +29,20 @@
   window.setDoc = setDoc;
   window.getDoc = getDoc;
 
+  // GHOST MODE HANDLER (Session Storage)
   const params = new URLSearchParams(location.search);
-  const shareId = params.get("share");
+  const viewId = params.get("view");
 
-  if(shareId) {
-    getDoc(doc(db, "shares", shareId)).then(snap => {
+  if(viewId) {
+    getDoc(doc(db, "shares", viewId)).then(snap => {
       if(snap.exists()) {
         const movies = snap.data().movies;
-        localStorage.setItem("savedMovies", JSON.stringify(movies));
+        // Save to TEMPORARY Session Storage (RAM)
+        sessionStorage.setItem("ghostMovies", JSON.stringify(movies));
+        // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
-        if(window.hardRefresh) window.hardRefresh();
+        // Reload to render
+        window.location.reload();
       }
     });
   }
@@ -57,6 +61,12 @@ body{
   display:flex;
   justify-content:center;
   align-items:center;
+  transition: border 0.3s;
+}
+
+/* GHOST MODE BORDER INDICATOR */
+body.ghost-active {
+    border: 4px solid #ff4444;
 }
 
 #trigger{
@@ -178,18 +188,56 @@ body{
   will-change:transform,opacity;
 }
 
-#share-btn{
+/* CONTROLS */
+#controls{
   position:fixed;
   bottom:24px;
   right:24px;
+  z-index:300;
+  display:flex;
+  gap:25px;
+}
+
+.control-btn{
   font-family:'Bebas Neue';
   letter-spacing:.2em;
   cursor:pointer;
-  z-index:300;
   opacity:0.6;
   transition:opacity 0.3s;
+  font-size: 1rem;
 }
-#share-btn:hover{opacity:1;}
+.control-btn:hover{opacity:1;}
+
+/* VIEW BANNER */
+#view-mode-banner{
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    display: none; 
+    z-index: 300;
+    align-items: center;
+    gap: 15px;
+    background: rgba(0,0,0,0.8);
+    padding: 10px 20px;
+    border: 1px solid #333;
+}
+
+#view-text {
+    font-family: 'Bebas Neue';
+    letter-spacing: .1em;
+    color: #ff4444; /* RED TEXT FOR GHOST MODE */
+}
+
+#exit-ghost {
+    font-family: 'Inter';
+    font-size: 0.75rem;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 4px 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+#exit-ghost:hover { background: #fff; color: #000; }
 
 #return{
   position:fixed;
@@ -219,12 +267,20 @@ body{
       <input id="search-input" placeholder="Search movie or series..." />
     </div>
   </div>
-
   <div id="search-results"></div>
   <div class="grid" id="grid"></div>
 </div>
 
-<div id="share-btn" onclick="shareMyMovies()">SHARE MY MOVIES</div>
+<div id="view-mode-banner">
+    <span id="view-text">GUEST MODE (READ ONLY)</span>
+    <span id="exit-ghost" onclick="exitGhostMode()">EXIT TO MY DATA</span>
+</div>
+
+<div id="controls">
+  <div class="control-btn" onclick="syncWithCode()">IMPORT/MERGE</div>
+  <div class="control-btn" id="link-btn" onclick="generateLink()">SHARE LINK</div>
+</div>
+
 <div id="return">RETURN</div>
 
 <script>
@@ -244,17 +300,36 @@ const searchIcon=document.getElementById("search-icon");
 const searchBar=document.getElementById("search-bar");
 const searchInput=document.getElementById("search-input");
 const searchResults=document.getElementById("search-results");
+const viewBanner=document.getElementById("view-mode-banner");
 
-/* ---------- STATE ---------- */
+/* ---------- STATE INITIALIZATION ---------- */
 let state=0;
 let circleItems=[];
 let savedMovies=[];
+let isViewMode = false;
 
-try {
-  savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || [];
-} catch(e) { savedMovies = []; }
+// 1. Check if we are in GHOST MODE (Session Storage)
+const ghostData = sessionStorage.getItem("ghostMovies");
 
-/* ---------- CIRCLE (OPTIMIZED) ---------- */
+if(ghostData) {
+    // --- GHOST MODE: FRIEND'S DATA ---
+    try {
+        savedMovies = JSON.parse(ghostData);
+        isViewMode = true;
+        
+        // UI Updates to show this is NOT your data
+        document.body.classList.add("ghost-active");
+        viewBanner.style.display = "flex";
+        searchIcon.style.display = "none"; 
+    } catch(e) { savedMovies = []; }
+} else {
+    // --- NORMAL MODE: YOUR DATA ---
+    try {
+        savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || [];
+    } catch(e) { savedMovies = []; }
+}
+
+/* ---------- CIRCLE ---------- */
 const RADIUS=260;
 
 function buildCircle(){
@@ -262,7 +337,6 @@ function buildCircle(){
   circleItems=[];
   if(savedMovies.length===0) return;
 
-  // Lag Fix: Visual Limit to 12
   const visualLimit = savedMovies.slice(-12);
 
   visualLimit.forEach((m,i)=>{
@@ -310,7 +384,8 @@ function openArchive(){
   archive.style.display="block";
   gsap.to(ret,{opacity:1,pointerEvents:"auto"});
   renderSaved();
-  if(savedMovies.length===0){
+  
+  if(savedMovies.length===0 && !isViewMode){
     searchBar.classList.add("active");
     searchInput.focus();
   }
@@ -328,10 +403,11 @@ searchInput.oninput=()=>{
   timer=setTimeout(searchMovies,400);
 };
 
-/* --- FIXED SEARCH LOGIC (Handles "Up", "Her", "It") --- */
 async function searchMovies(){
+  if(isViewMode) return; 
+
   let rawQ = searchInput.value.trim();
-  if(rawQ.length<2){ searchResults.innerHTML=""; return; } // Allows "Up", "It"
+  if(rawQ.length<2){ searchResults.innerHTML=""; return; }
 
   let cleanQ = rawQ.toLowerCase();
   
@@ -343,7 +419,6 @@ async function searchMovies(){
     yearSearch = yearMatch[2];
   }
 
-  // Aliases
   const smartAliases = {
     "aot": "attack on titan", "got": "game of thrones",
     "lotr": "lord of the rings", "op": "one piece", "jjk": "jujutsu kaisen",
@@ -351,27 +426,20 @@ async function searchMovies(){
   };
   titleSearch = smartAliases[titleSearch] || titleSearch;
 
-  // 1. Standard Search (s=)
   let url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
   if(yearSearch) url += `&y=${yearSearch}`;
 
   let r = await fetch(url);
   let d = await r.json();
 
-  // 2. Fallback: If "Too many results" or not found, try EXACT lookup (t=)
   if(d.Response === "False") {
-    // Attempt Exact Title Lookup (Fixes "Up", "Her", "It")
     let exactUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&t=${encodeURIComponent(titleSearch)}`;
     if(yearSearch) exactUrl += `&y=${yearSearch}`;
-    
     let r2 = await fetch(exactUrl);
     let d2 = await r2.json();
-    
     if(d2.Response === "True") {
-      // Mock the structure of a search result
       d = { Response: "True", Search: [d2] };
     } else {
-       // 3. Last Resort: Try original query without year
        if(yearSearch) {
           let fallbackUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
           let r3 = await fetch(fallbackUrl);
@@ -394,6 +462,10 @@ async function searchMovies(){
 
 /* ---------- SAVE / UNSAVE ---------- */
 function saveMovie(movie){
+  if(isViewMode){
+      alert("You are viewing a friend's list. Click 'EXIT' to edit your own list.");
+      return;
+  }
   if(savedMovies.find(m=>m.imdbID===movie.imdbID)) return;
   savedMovies.push(movie);
   localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
@@ -408,22 +480,24 @@ function saveMovie(movie){
 }
 
 function removeMovie(id){
+  if(isViewMode) return;
   savedMovies=savedMovies.filter(m=>m.imdbID!==id);
   localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
   renderSaved();
 }
 
-/* ---------- RENDER SAVED ---------- */
 function renderSaved(){
   grid.innerHTML="";
   savedMovies.forEach(m=>{
     const el=document.createElement("div");
     el.className="grid-item";
     el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
-    el.oncontextmenu=e=>{
-      e.preventDefault();
-      removeMovie(m.imdbID);
-    };
+    if(!isViewMode){
+        el.oncontextmenu=e=>{
+          e.preventDefault();
+          removeMovie(m.imdbID);
+        };
+    }
     grid.appendChild(el);
   });
   enableGridFocus();
@@ -443,34 +517,89 @@ function enableGridFocus(){
   });
 }
 
-/* ---------- SHARE ---------- */
-async function shareMyMovies(){
-  if(savedMovies.length===0){ alert("No movies to share yet."); return; }
-  if(!window.db || !window.setDoc){ alert("System loading..."); return; }
+/* ---------- SYNC & SHARE ---------- */
+
+// 1. SHARE LINK (Generates View Link)
+async function generateLink(){
+  if(savedMovies.length===0){ alert("Empty."); return; }
+  if(!window.db){ alert("Loading..."); return; }
 
   const id = Math.random().toString(36).substring(2,8);
-  const shareBtn = document.getElementById("share-btn");
-  shareBtn.innerText = "GENERATING...";
+  const btn = document.getElementById("link-btn");
+  btn.innerText = "...";
 
   try {
     await window.setDoc(window.doc(window.db,"shares",id), {
       movies: savedMovies,
+      type: "view",
       createdAt: Date.now()
     });
-    const link = `${location.origin}${location.pathname}?share=${id}`;
+    
+    const link = `${location.origin}${location.pathname}?view=${id}`;
     await navigator.clipboard.writeText(link);
-    shareBtn.innerText = "LINK COPIED!";
-    setTimeout(() => shareBtn.innerText = "SHARE MY MOVIES", 2000);
+    btn.innerText = "COPIED";
+    setTimeout(() => btn.innerText = "SHARE LINK", 2000);
+    alert("Share Link Copied!\n\nWhen they open this, they will see your movies in GUEST MODE. Their data will be safe.");
   } catch(e) {
-    shareBtn.innerText = "ERROR";
+    btn.innerText = "ERR";
   }
 }
 
-window.hardRefresh = () => {
-  savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || [];
-  if(state === 1) buildCircle();
-  if(state === 2) renderSaved();
-};
+// 2. IMPORT / MERGE (The Fix!)
+async function syncWithCode(){
+  if(isViewMode) { alert("Exit Guest Mode first."); return; }
+  if(!window.db){ alert("Loading..."); return; }
+  
+  const choice = prompt("Type '1' to EXPORT (Get Code)\nType '2' to IMPORT (Merge friend's list into mine)");
+  
+  if(choice === "1") {
+      if(savedMovies.length===0) return alert("Nothing to export.");
+      const id = Math.random().toString(36).substring(2,8);
+      await window.setDoc(window.doc(window.db,"shares",id), {
+        movies: savedMovies,
+        createdAt: Date.now()
+      });
+      alert(`SYNC CODE: ${id}\nGive this to a friend to add your movies to their list.`);
+      
+  } else if (choice === "2") {
+      const code = prompt("Enter 6-digit Code:");
+      if(!code) return;
+      
+      window.getDoc(window.doc(window.db, "shares", code.trim())).then(snap => {
+        if(snap.exists()) {
+          const friendMovies = snap.data().movies;
+          
+          // --- THE SAFE MERGE LOGIC ---
+          // 1. Get MY current movies
+          const myMovies = JSON.parse(localStorage.getItem("savedMovies")) || [];
+          
+          // 2. Add friend's movies to mine
+          const combined = [...myMovies, ...friendMovies];
+          
+          // 3. Remove duplicates (Keep unique imdbIDs)
+          const uniqueMovies = combined.filter((obj, index, self) =>
+            index === self.findIndex((t) => t.imdbID === obj.imdbID)
+          );
+
+          // 4. Save the MERGED list
+          savedMovies = uniqueMovies;
+          localStorage.setItem("savedMovies", JSON.stringify(uniqueMovies));
+          
+          alert(`Success! Merged ${friendMovies.length} movies into your list.\nTotal: ${uniqueMovies.length}`);
+          window.location.reload();
+          
+        } else {
+          alert("Invalid Code.");
+        }
+      });
+  }
+}
+
+// 3. EXIT GHOST MODE
+function exitGhostMode() {
+    sessionStorage.removeItem("ghostMovies");
+    window.location.reload();
+}
 
 ret.onclick=()=>{
   archive.style.display="none";
