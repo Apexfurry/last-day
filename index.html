@@ -24,7 +24,7 @@ body{
   transition: border 0.3s;
 }
 
-/* SHARED MODE STYLES */
+/* SHARED MODE BORDER */
 body.is-shared {
     border: 6px solid #ff0044;
 }
@@ -40,9 +40,7 @@ body.is-shared {
 }
 
 /* Change Title Color in Shared Mode */
-body.is-shared #trigger {
-    color: #ff0044;
-}
+body.is-shared #trigger { color: #ff0044; }
 
 #circle{
   position:fixed;
@@ -265,13 +263,11 @@ body.is-shared #trigger {
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Attach to window for the main script to use
   window.db = db;
   window.doc = doc;
   window.setDoc = setDoc;
   window.getDoc = getDoc;
 
-  // INITIALIZE APP LOGIC AFTER FIREBASE LOADS
   if(window.initApp) window.initApp();
 </script>
 
@@ -295,11 +291,13 @@ const sharedBanner = document.getElementById("shared-banner");
 const exitBtn = document.getElementById("exit-btn");
 const importBtn = document.getElementById("import-btn");
 const shareBtn = document.getElementById("share-btn");
+const hoverSound = document.getElementById("hoverSound");
 
 // Global State
-let state = 0; // 0=Intro, 1=Circle, 2=Archive
-let savedMovies = []; // The active list of movies
-let isSharedMode = false; // Flag for isolation
+let state = 0; 
+let savedMovies = []; 
+let circleItems = []; // Needed for effect
+let isSharedMode = false; 
 
 /* ---------- INITIALIZATION ---------- */
 window.initApp = async () => {
@@ -308,24 +306,18 @@ window.initApp = async () => {
     const viewId = params.get("view");
     const sessionData = sessionStorage.getItem("sharedMovies");
 
-    // 1. DECIDE MODE
     if (viewId) {
-        // --- A. URL LINK DETECTED ---
         console.log("Link detected. Fetching...");
-        enterSharedMode(); // Turn on UI immediately
+        enterSharedMode(); 
         await loadFromFirebase(viewId);
     } 
     else if (sessionData) {
-        // --- B. SESSION DATA EXISTS (Refresh handling) ---
         console.log("Session data found.");
         enterSharedMode();
         savedMovies = JSON.parse(sessionData);
-        // Clean up URL just in case
         window.history.replaceState({}, document.title, window.location.pathname);
     } 
     else {
-        // --- C. NORMAL MODE (Local Storage) ---
-        console.log("Loading Local Data.");
         loadLocalData();
     }
 };
@@ -335,11 +327,10 @@ function loadLocalData() {
     document.body.classList.remove("is-shared");
     sharedBanner.style.display = "none";
     trigger.innerText = "LAST DAY";
-    searchIcon.style.display = "block"; // Show search
+    searchIcon.style.display = "block"; 
     importBtn.style.display = "none";
     shareBtn.innerText = "SHARE";
     
-    // Load from LocalStorage
     try {
         savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || [];
     } catch(e) { savedMovies = []; }
@@ -347,15 +338,13 @@ function loadLocalData() {
 
 function enterSharedMode() {
     isSharedMode = true;
-    savedMovies = []; // STRICT WIPE: Ensure no leakage
-    
-    // UI Updates
+    savedMovies = []; 
     document.body.classList.add("is-shared");
     sharedBanner.style.display = "flex";
     trigger.innerText = "SHARED LIST";
-    searchIcon.style.display = "none"; // Hide search in shared mode
-    importBtn.style.display = "block"; // Show import button
-    shareBtn.innerText = "COPY LINK"; // Change share text
+    searchIcon.style.display = "none"; 
+    importBtn.style.display = "block"; 
+    shareBtn.innerText = "COPY LINK"; 
 }
 
 async function loadFromFirebase(id) {
@@ -366,28 +355,22 @@ async function loadFromFirebase(id) {
         if(snap.exists()) {
             const data = snap.data();
             savedMovies = data.movies;
-            
-            // Save to Session (RAM only) so it survives refresh
             sessionStorage.setItem("sharedMovies", JSON.stringify(savedMovies));
-            
-            // Remove ID from URL for cleanliness
             window.history.replaceState({}, document.title, window.location.pathname);
         } else {
             alert("Link expired or invalid.");
             exitSharedMode();
         }
     } catch(e) {
-        console.error(e);
         alert("Error loading shared list.");
     }
 }
 
-/* ---------- EXIT LOGIC ---------- */
 exitBtn.onclick = exitSharedMode;
 
 function exitSharedMode() {
-    sessionStorage.removeItem("sharedMovies"); // Clear RAM
-    window.location.href = window.location.pathname; // Hard Reload to clear everything
+    sessionStorage.removeItem("sharedMovies"); 
+    window.location.href = window.location.pathname; 
 }
 
 
@@ -418,23 +401,23 @@ ret.onclick = () => {
 function openArchive(){
     state=2;
     trigger.style.display="none";
-    circle.innerHTML=""; // Clear circle
+    gsap.to(circleItems,{opacity:0,scale:0,onComplete:()=>circle.innerHTML=""});
     archive.style.display="block";
     gsap.to(ret,{opacity:1,pointerEvents:"auto"});
     renderSaved();
     
-    // Only auto-focus search if NOT shared mode
     if(savedMovies.length===0 && !isSharedMode){
         searchBar.classList.add("active");
         searchInput.focus();
     }
 }
 
-/* ---------- RENDER ---------- */
+/* ---------- CIRCLE EFFECTS RESTORED ---------- */
 const RADIUS=260;
 
 function buildCircle(){
     circle.innerHTML="";
+    circleItems = []; // Reset array
     if(savedMovies.length===0) return;
     const limit = savedMovies.slice(-12);
 
@@ -443,23 +426,38 @@ function buildCircle(){
         el.className="poster";
         el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
         circle.appendChild(el);
+        circleItems.push(el); // Add to tracking array
         
         const a=i/limit.length*Math.PI*2-Math.PI/2;
         const x=Math.cos(a)*RADIUS;
         const y=Math.sin(a)*RADIUS;
+        el.dataset.x=x;
+        el.dataset.y=y;
         
         gsap.set(el,{x:0,y:0,scale:.8,opacity:0});
         gsap.to(el,{x,y,scale:1,opacity:1,duration:1.2,delay:i*.08});
         
+        // --- RESTORED HOVER EFFECT ---
         el.onmouseenter=()=>{
-            const sound = document.getElementById("hoverSound");
-            if(sound) { sound.currentTime=0; sound.play().catch(()=>{}); }
-            gsap.to(el,{scale:1.12});
+            try{ hoverSound.currentTime=0; hoverSound.play(); }catch(e){}
+            // Dim others
+            circleItems.forEach(p => {
+                if(p !== el) gsap.to(p, {opacity: 0.15, duration: 0.3});
+            });
+            // Scale active
+            gsap.to(el, {x:x*1.15, y:y*1.15, scale:1.12, duration: 0.4});
         };
-        el.onmouseleave=()=>gsap.to(el,{scale:1});
+        
+        el.onmouseleave=()=>{
+            // Restore others
+            circleItems.forEach(p => gsap.to(p, {opacity: 1, duration: 0.3}));
+            // Restore active
+            gsap.to(el, {x, y, scale: 1, duration: 0.4});
+        };
     });
 }
 
+/* ---------- GRID EFFECTS RESTORED ---------- */
 function renderSaved(){
     grid.innerHTML="";
     savedMovies.forEach(m=>{
@@ -467,7 +465,6 @@ function renderSaved(){
         el.className="grid-item";
         el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
         
-        // Disable delete in shared mode
         if(!isSharedMode){
             el.oncontextmenu=e=>{
                 e.preventDefault();
@@ -476,9 +473,27 @@ function renderSaved(){
         }
         grid.appendChild(el);
     });
+    enableGridFocus(); // ACTIVATE EFFECTS
 }
 
-/* ---------- SEARCH & SAVE (LOCKED IN SHARED MODE) ---------- */
+function enableGridFocus(){
+  const items=document.querySelectorAll(".grid-item");
+  items.forEach(i=>{
+    i.onmouseenter=()=>{
+      // Dim others
+      items.forEach(o=>o!==i&&gsap.to(o,{opacity:0.2, duration:0.3}));
+      // Scale active
+      gsap.to(i,{scale:1.08, duration:0.3});
+    };
+    i.onmouseleave=()=>{
+      // Restore all
+      items.forEach(o=>gsap.to(o,{opacity:1, duration:0.3}));
+      gsap.to(i,{scale:1, duration:0.3});
+    };
+  });
+}
+
+/* ---------- SEARCH & SAVE ---------- */
 searchIcon.onclick=()=>{
   if(isSharedMode) return;
   searchBar.classList.toggle("active");
@@ -492,27 +507,63 @@ searchInput.oninput=()=>{
 };
 
 async function searchMovies(){
-  if(isSharedMode) return; // LOCK SEARCH
+  if(isSharedMode) return;
 
   let rawQ = searchInput.value.trim();
   if(rawQ.length<2){ searchResults.innerHTML=""; return; }
   let cleanQ = rawQ.toLowerCase();
   
-  // Logic from before (skipped for brevity, but needed)
-  let url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(cleanQ)}`;
+  let titleSearch = cleanQ;
+  let yearSearch = "";
+  const yearMatch = cleanQ.match(/^(.+?)\s+(\d{4})$/);
+  if(yearMatch) {
+    titleSearch = yearMatch[1].trim(); 
+    yearSearch = yearMatch[2];
+  }
+
+  const smartAliases = {
+    "seven": "se7en", "aot": "attack on titan", "got": "game of thrones",
+    "lotr": "lord of the rings", "op": "one piece", "jjk": "jujutsu kaisen",
+    "bb": "breaking bad", "bcs": "better call saul", "himym": "how i met your mother"
+  };
+  titleSearch = smartAliases[titleSearch] || titleSearch;
+
+  let url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
+  if(yearSearch) url += `&y=${yearSearch}`;
+
   let r = await fetch(url);
   let d = await r.json();
+
+  // Fallback Logic
+  if(d.Response === "False") {
+    let exactUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&t=${encodeURIComponent(titleSearch)}`;
+    if(yearSearch) exactUrl += `&y=${yearSearch}`;
+    let r2 = await fetch(exactUrl);
+    let d2 = await r2.json();
+    if(d2.Response === "True") {
+      d = { Response: "True", Search: [d2] };
+    } else {
+       if(yearSearch) {
+          let fallbackUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
+          let r3 = await fetch(fallbackUrl);
+          d = await r3.json();
+       }
+    }
+  }
   
   searchResults.innerHTML="";
-  if(d.Response==="False") return;
+  if(d.Response==="False" || !d.Search) return;
 
   d.Search.forEach(m=>{
     const el=document.createElement("div");
     el.className="grid-item";
     el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
-    el.onclick=()=>saveMovie(m); // Click to save
+    el.onclick=()=>saveMovie(m); 
     searchResults.appendChild(el);
   });
+  
+  // Re-enable focus for search results too
+  enableGridFocus();
 }
 
 function saveMovie(movie){
@@ -520,7 +571,6 @@ function saveMovie(movie){
         alert("You are in SHARED MODE. Click 'IMPORT' to add this list to your own.");
         return;
     }
-    // Check duplicates
     if(savedMovies.find(m=>m.imdbID===movie.imdbID)) return;
     
     savedMovies.push(movie);
@@ -536,19 +586,15 @@ function removeMovie(id){
 }
 
 /* ---------- BUTTON ACTIONS ---------- */
-
-// 1. SHARE (Creates Link)
 shareBtn.onclick = async () => {
     if(!window.db) return alert("Loading...");
     
-    // If in Shared Mode, we just copy the current URL
     if(isSharedMode) {
         await navigator.clipboard.writeText(location.href);
         alert("Link Copied!");
         return;
     }
 
-    // Normal Mode: Create new Share
     if(savedMovies.length===0) return alert("List is empty.");
     
     const id = Math.random().toString(36).substring(2,8);
@@ -559,35 +605,27 @@ shareBtn.onclick = async () => {
     
     const link = `${location.origin}${location.pathname}?view=${id}`;
     await navigator.clipboard.writeText(link);
-    alert("Share Link Copied! Sending this link allows others to VIEW this list.");
+    alert("Share Link Copied!");
 };
 
-// 2. IMPORT (Merge Shared into Local)
 importBtn.onclick = () => {
     if(!isSharedMode) return;
     
     const choice = confirm("Merge these shared movies into your personal list?");
     if(choice) {
-        // 1. Get Local Data
         let myData = [];
         try { myData = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){}
         
-        // 2. Merge
         const combined = [...myData, ...savedMovies];
-        
-        // 3. Unique
         const unique = combined.filter((obj, index, self) =>
             index === self.findIndex((t) => t.imdbID === obj.imdbID)
         );
         
-        // 4. Save to Local
         localStorage.setItem("savedMovies", JSON.stringify(unique));
-        
-        alert("Movies Imported Successfully! Returning to your list...");
+        alert("Imported Successfully!");
         exitSharedMode();
     }
 };
-
 </script>
 </body>
 </html>
