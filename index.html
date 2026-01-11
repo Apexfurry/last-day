@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>LAST DAY // SPEED</title>
+<title>LAST DAY // FINAL COLOR</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Syncopate:wght@700;800&display=swap" rel="stylesheet">
 
@@ -47,19 +47,17 @@ body {
 }
 
 /* =========================
-   PAGE 1: THE RING INTRO (CSS BG)
+   PAGE 1: THE RING INTRO
    ========================= */
 #intro-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     z-index: 9999; 
-    /* CSS-ONLY BACKGROUND (Zero Lag) */
     background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 70%);
     overflow: hidden;
     opacity: 0; transition: opacity 0.5s;
     perspective: 1000px;
 }
 
-/* Subtle Grid Texture */
 #intro-overlay::after {
     content: ""; position: absolute; inset: 0;
     background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
@@ -67,7 +65,6 @@ body {
     background-size: 60px 60px; pointer-events: none;
 }
 
-/* CENTER TEXT */
 .center-title {
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
@@ -82,23 +79,17 @@ body {
     color: var(--primary); text-shadow: 0 0 40px var(--primary); letter-spacing: 6px;
 }
 
-/* RING CONTAINER */
 #ring-wrap {
     position: absolute; top: 50%; left: 50%; width: 0; height: 0; z-index: 100;
 }
 
-/* RING ITEMS (Low Res / Fast) */
 .ring-item {
     position: absolute; top: -90px; left: -60px;
     width: 120px; height: 180px;
     background-size: cover; background-position: center;
     border: 1px solid rgba(255,255,255,0.15);
     cursor: default;
-    
-    /* Hardware Acceleration */
-    will-change: transform; 
-    transform: translateZ(0); 
-    
+    will-change: transform; transform: translateZ(0); 
     transition: opacity 0.2s, filter 0.2s;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
@@ -107,22 +98,18 @@ body {
     opacity: 0.15; filter: grayscale(100%) blur(1px); pointer-events: none; 
 }
 
-/* THE "GHOST" INSPECTOR (High Res / Crisp) */
 #inspector {
     position: absolute; top: 50%; left: 50%;
     width: 120px; height: 180px; 
     background-size: cover; background-position: center;
-    
-    /* Optimize for Quality */
     image-rendering: -webkit-optimize-contrast;
-    
     z-index: 1000; display: none; pointer-events: auto; cursor: default;
     border: 1px solid #fff; box-shadow: 0 30px 80px rgba(0,0,0,0.9);
 }
 
 
 /* =========================
-   PAGE 2: THE APP
+   PAGE 2: THE APP (FULL COLOR)
    ========================= */
 #app-container {
     display: none; opacity: 0; height: 100vh; overflow-y: auto;
@@ -158,13 +145,35 @@ header {
 #header-search-btn:hover { transform: scale(1.05); background: var(--primary); }
 
 #main-grid { margin-top: 100px; padding: 0 40px 40px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
-.card { position: relative; aspect-ratio: 2/3; background: #1a1a1a; cursor: pointer; transition: transform 0.2s; overflow: hidden; border: 1px solid #333; }
-.card-img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: filter 0.3s; }
-.card:hover { transform: translateY(-5px); z-index: 10; border-color: var(--primary); }
-.card:hover .card-img { filter: grayscale(0%); }
-.card-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.9); padding: 15px; transform: translateY(100%); transition: transform 0.2s; }
+
+/* --- CARD STYLES (UPDATED FOR COLOR) --- */
+.card { 
+    position: relative; aspect-ratio: 2/3; background: #1a1a1a; 
+    cursor: pointer; transition: transform 0.2s; 
+    overflow: hidden; border: 1px solid #333; 
+}
+.card-img { 
+    width: 100%; height: 100%; object-fit: cover; 
+    filter: grayscale(0%); /* FULL COLOR ALWAYS */
+    transition: transform 0.4s;
+}
+.card:hover { 
+    transform: translateY(-8px); z-index: 10; 
+    border-color: var(--primary); 
+    box-shadow: 0 10px 30px rgba(0, 255, 65, 0.1);
+}
+/* Subtle zoom on image instead of color shift */
+.card:hover .card-img { transform: scale(1.05); } 
+
+.card-overlay { 
+    position: absolute; bottom: 0; left: 0; right: 0; 
+    background: rgba(0,0,0,0.9); padding: 15px; 
+    transform: translateY(100%); transition: transform 0.2s; 
+    border-top: 1px solid var(--primary);
+}
 .card:hover .card-overlay { transform: translateY(0); }
 .card-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.8rem; color: #fff; }
+.card-year { font-family: 'Syncopate'; font-size: 0.7rem; color: var(--primary); margin-top: 4px; }
 
 .controls { position: fixed; bottom: 40px; right: 40px; display: flex; flex-direction: column; gap: 12px; z-index: 200; }
 .btn { background: #000; color: var(--text); border: 1px solid #333; padding: 14px 24px; font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-transform: uppercase; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 160px; }
@@ -285,13 +294,11 @@ function buildRing() {
                 
                 // B. Silent High-Res Fetch
                 if(url.includes("SX300")) {
-                    // Try to fetch bigger image
-                    const hiRes = url.replace("SX300", "SX1000"); // Attempt 1000px width
-                    const hdImg = new Image();
-                    hdImg.src = hiRes;
-                    hdImg.onload = () => {
-                        // Only replace if user is still looking at it
-                        if(inspector.style.display === 'block' && inspector.style.backgroundImage.includes(url)) {
+                    let hiRes = url.replace("SX300", "SX1000"); 
+                    let img = new Image();
+                    img.src = hiRes;
+                    img.onload = () => {
+                        if(inspector.style.display === 'block') {
                             inspector.style.backgroundImage = `url(${hiRes})`;
                         }
                     };
@@ -381,7 +388,7 @@ document.getElementById('enter-trigger').onclick = window.triggerEntry;
 document.getElementById('return-btn').onclick = window.triggerReturn;
 
 
-// --- APP LOGIC (Same Robust Features) ---
+// --- APP LOGIC ---
 const OMDB_KEY = "a274b977"; 
 const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
 window.appNotInitialized = true; 
@@ -454,8 +461,20 @@ function render() {
         const card = document.createElement('div'); card.className = 'card';
         let imgUrl = movie.Poster && movie.Poster !== "N/A" ? movie.Poster : PLACEHOLDER;
         if(imgUrl.includes("SX300")) imgUrl = imgUrl.replace("SX300", "SX700");
-        card.innerHTML = `<img class="card-img" src="${imgUrl}" loading="lazy"><div class="card-overlay"><div class="card-title">${movie.Title}</div><div class="card-year">${movie.Year}</div></div>`;
-        if(!isSharedMode) { card.oncontextmenu = (e) => { e.preventDefault(); if(confirm(`DELETE "${movie.Title}"?`)) removeMovie(movie.imdbID); }; }
+        
+        card.innerHTML = `
+            <img class="card-img" src="${imgUrl}" loading="lazy">
+            <div class="card-overlay">
+                <div class="card-title">${movie.Title}</div>
+                <div class="card-year">${movie.Year}</div>
+            </div>`;
+            
+        if(!isSharedMode) { 
+            card.oncontextmenu = (e) => { 
+                e.preventDefault(); 
+                if(confirm(`DELETE "${movie.Title}"?`)) removeMovie(movie.imdbID); 
+            }; 
+        }
         mainGrid.appendChild(card);
         gsap.from(card, { y: 30, opacity: 0, duration: 0.6, delay: index * 0.05 });
     });
@@ -489,7 +508,11 @@ async function performSearch() {
             data.Search.forEach(m => {
                 const el = document.createElement('div'); el.className = 'card'; el.style.border = "1px solid #333";
                 let imgUrl = m.Poster !== "N/A" ? m.Poster : PLACEHOLDER;
-                el.innerHTML = `<img class="card-img" src="${imgUrl}" style="filter:none;"><div class="card-overlay" style="transform:translateY(0)"><div class="card-title">ADD TO ARCHIVE +</div></div>`;
+                el.innerHTML = `
+                    <img class="card-img" src="${imgUrl}" style="filter:none;">
+                    <div class="card-overlay" style="transform:translateY(0)">
+                        <div class="card-title">ADD TO ARCHIVE +</div>
+                    </div>`;
                 el.onclick = () => addToLibrary(m); searchResults.appendChild(el);
             });
         } else { searchResults.innerHTML = `<div style="color:#666">NO DATA FOUND</div>`; }
