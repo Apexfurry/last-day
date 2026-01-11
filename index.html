@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>LAST DAY // FINAL</title>
+<title>LAST DAY // FINAL SYSTEM</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Syncopate:wght@700;800&display=swap" rel="stylesheet">
 
@@ -29,96 +29,99 @@ body {
 }
 
 /* =========================
+   LOADER
+   ========================= */
+#loader {
+    position: fixed; inset: 0; z-index: 10000;
+    background: #000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.5s;
+    pointer-events: none;
+}
+.loader-text {
+    font-family: 'Syncopate', sans-serif; color: var(--primary);
+    font-size: 1.5rem; letter-spacing: 5px; margin-bottom: 20px;
+    text-transform: uppercase;
+}
+.loader-bar {
+    width: 200px; height: 2px; background: #333; position: relative; overflow: hidden;
+}
+.loader-progress {
+    position: absolute; top: 0; left: 0; height: 100%; width: 0%;
+    background: var(--primary); transition: width 0.2s;
+}
+
+/* =========================
    PAGE 1: THE RING INTRO
    ========================= */
 #intro-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    z-index: 9999;
-    background: #000;
-    overflow: hidden;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 9999; background: #000; overflow: hidden;
+    opacity: 0; transition: opacity 1s;
+    perspective: 1200px; /* Deep 3D Space */
 }
 
 #canvas-container {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 1;
-    transition: opacity 0.6s;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1; transition: opacity 0.6s;
 }
 
-/* CENTER TEXT (THE ONLY TRIGGER) */
+/* CENTER TEXT */
 .center-title {
-    position: absolute;
-    top: 50%; left: 50%;
+    position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     z-index: 50;
-    font-family: 'Syncopate', sans-serif;
-    font-weight: 700;
-    font-size: 0.9rem;
-    letter-spacing: 4px;
-    color: #fff;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.4s;
-    pointer-events: auto;
+    font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 0.9rem;
+    letter-spacing: 4px; color: #fff; cursor: pointer; text-transform: uppercase;
+    transition: all 0.4s; pointer-events: auto;
     text-shadow: 0 0 20px rgba(255,255,255,0.2);
-    padding: 20px; /* Bigger click area */
-    border: 1px solid transparent;
+    padding: 40px; /* Large hit area */
 }
 .center-title:hover {
-    color: var(--primary);
-    text-shadow: 0 0 30px var(--primary);
-    letter-spacing: 6px;
-    border-color: rgba(0, 255, 65, 0.3);
+    color: var(--primary); text-shadow: 0 0 40px var(--primary); letter-spacing: 6px;
 }
 
-/* THE RING CONTAINER */
+/* RING CONTAINER */
 #ring-wrap {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 0; height: 0;
-    z-index: 100;
+    position: absolute; top: 50%; left: 50%; width: 0; height: 0; z-index: 100;
 }
 
-/* RING ITEMS (Spinning) */
+/* RING ITEMS */
 .ring-item {
-    position: absolute;
-    top: -90px; left: -60px;
+    position: absolute; top: -90px; left: -60px;
     width: 120px; height: 180px;
-    
-    background-size: cover;
-    background-position: center;
+    background-size: cover; background-position: center;
     border: 1px solid rgba(255,255,255,0.15);
-    cursor: default; /* Not clickable for entry anymore */
+    cursor: default;
+    
+    /* PERFORMANCE OPTIMIZATION */
+    will-change: transform, opacity; 
+    backface-visibility: hidden; 
+    transform: translateZ(0); 
     
     transition: opacity 0.3s, filter 0.3s;
-    will-change: transform;
-    
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
 #ring-wrap.dimmed .ring-item {
-    opacity: 0.2;
-    filter: grayscale(100%) blur(2px);
-    pointer-events: none; 
+    opacity: 0.2; filter: grayscale(100%) blur(2px); pointer-events: none; 
 }
 
 /* THE "GHOST" INSPECTOR */
 #inspector {
-    position: absolute;
-    top: 50%; left: 50%;
+    position: absolute; top: 50%; left: 50%;
     width: 120px; height: 180px; 
     
-    background-size: cover;
-    background-position: center;
+    background-size: cover; background-position: center;
     
-    z-index: 1000;
-    display: none; 
-    pointer-events: auto; 
-    cursor: default; /* Just for looking */
-    
-    border: 1px solid #fff;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    /* Sharpness & Speed */
+    image-rendering: -webkit-optimize-contrast; 
+    will-change: transform;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+
+    z-index: 1000; display: none; pointer-events: auto; cursor: default;
+    border: 1px solid #fff; box-shadow: 0 30px 80px rgba(0,0,0,0.9);
 }
 
 
@@ -126,21 +129,15 @@ body {
    PAGE 2: THE APP
    ========================= */
 #app-container {
-    display: none; 
-    opacity: 0;
-    height: 100vh;
-    overflow-y: auto;
-    position: relative;
-    z-index: 50;
+    display: none; opacity: 0; height: 100vh; overflow-y: auto;
+    position: relative; z-index: 50;
     background: radial-gradient(circle at 50% 50%, #111 0%, #000 100%);
 }
-
 .bg-grid {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
     background-size: 40px 40px; pointer-events: none; z-index: -1;
 }
-
 header {
     position: fixed; top: 0; left: 0; right: 0; height: 80px;
     background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px);
@@ -148,12 +145,10 @@ header {
     display: flex; align-items: center; justify-content: space-between; 
     padding: 0 40px; z-index: 100;
 }
-
 #return-btn {
-    font-family: 'Syncopate', sans-serif;
-    font-weight: 700;
-    font-size: 0.9rem; color: #888; cursor: pointer; text-transform: uppercase;
-    transition: color 0.3s, transform 0.3s; display: flex; align-items: center; gap: 10px;
+    font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 0.9rem; color: #888; 
+    cursor: pointer; text-transform: uppercase; transition: color 0.3s, transform 0.3s; 
+    display: flex; align-items: center; gap: 10px;
 }
 #return-btn::before { content: '←'; font-family: 'Inter'; font-size: 1.2rem; }
 #return-btn:hover { color: #fff; transform: translateX(-5px); }
@@ -167,7 +162,6 @@ header {
 #header-search-btn:hover { transform: scale(1.05); background: var(--primary); }
 
 #main-grid { margin-top: 100px; padding: 0 40px 40px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
-
 .card { position: relative; aspect-ratio: 2/3; background: #1a1a1a; cursor: pointer; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); overflow: hidden; border: 1px solid transparent; }
 .card-img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%) contrast(1.2); transition: filter 0.4s; }
 .card:hover { transform: translateY(-10px) scale(1.02); z-index: 10; border-color: var(--primary); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
@@ -188,19 +182,21 @@ header {
 #close-search { position: absolute; top: 40px; right: 40px; font-size: 2rem; cursor: pointer; color: #555; transition: color 0.3s; }
 #close-search:hover { color: #fff; }
 #search-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 30px; overflow-y: auto; padding-bottom: 100px; }
-
 #empty-state { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; opacity: 0.3; }
 #empty-state h1 { font-family: 'Syncopate'; font-size: 4rem; letter-spacing: 10px; }
-
 #toast { position: fixed; top: 100px; right: -300px; background: var(--primary); color: #000; padding: 15px 30px; font-family: 'Syncopate'; font-weight: 700; font-size: 0.8rem; z-index: 500; transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 </style>
 </head>
 <body>
 
+<div id="loader">
+    <div class="loader-text">SYSTEM BOOT</div>
+    <div class="loader-bar"><div class="loader-progress" id="progress-bar"></div></div>
+</div>
+
 <div id="intro-overlay">
     <div id="canvas-container"></div>
     <div class="center-title" id="enter-trigger">LAST DAY</div>
-    
     <div id="ring-wrap"></div>
     <div id="inspector"></div>
 </div>
@@ -212,10 +208,7 @@ header {
         <button id="header-search-btn">SEARCH [S]</button>
     </header>
     <div id="main-grid"></div>
-    <div id="empty-state">
-        <h1>NULL</h1>
-        <p>NO RECORDS FOUND</p>
-    </div>
+    <div id="empty-state"><h1>NULL</h1><p>NO RECORDS FOUND</p></div>
     <div class="controls">
         <button class="btn" id="btn-share"><span>Share</span> <span>☍</span></button>
         <button class="btn" id="btn-import" style="display:none; border-color: var(--accent); color: var(--accent);"><span>Import</span> <span>⇩</span></button>
@@ -236,21 +229,35 @@ import { EffectComposer } from 'https://unpkg.com/three@0.126.0/examples/jsm/pos
 import { RenderPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/UnrealBloomPass.js';
 
-let camera, scene, renderer, composer, particles, count = 2000, dummy = new THREE.Object3D();
+let camera, scene, renderer, composer, particles;
 let mouseX = 0, mouseY = 0;
+
+// DETECT LOW SPEC DEVICES (Mobiles or Small Screens)
+const isLowSpec = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 900;
+
+// CONFIGURE SETTINGS
+const SETTINGS = {
+    particleCount: isLowSpec ? 300 : 1500, // Reduce load on weak devices
+    useBloom: !isLowSpec,                  // Disable heavy glow on weak devices
+    pixelRatio: isLowSpec ? 1 : Math.min(window.devicePixelRatio, 2) // Cap resolution
+};
 
 function init() {
     const container = document.getElementById('canvas-container');
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 3000);
     camera.position.z = 1000;
+    
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x000000, 0.001);
 
     const geometry = new THREE.TetrahedronGeometry(10, 0);
     const material = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true });
-    particles = new THREE.InstancedMesh(geometry, material, count);
     
-    for(let i = 0; i < count; i++) {
+    // Create Particles
+    particles = new THREE.InstancedMesh(geometry, material, SETTINGS.particleCount);
+    const dummy = new THREE.Object3D();
+    
+    for(let i = 0; i < SETTINGS.particleCount; i++) {
         dummy.position.set(Math.random()*2000-1000, Math.random()*2000-1000, Math.random()*2000-1000);
         dummy.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
         const scale = Math.random() * 2 + 0.5;
@@ -260,38 +267,71 @@ function init() {
     }
     scene.add(particles);
 
-    renderer = new THREE.WebGLRenderer({ antialias: false });
+    // Renderer Setup
+    renderer = new THREE.WebGLRenderer({ 
+        antialias: !isLowSpec, 
+        powerPreference: "high-performance",
+        alpha: false 
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(SETTINGS.pixelRatio);
     container.appendChild(renderer.domElement);
 
-    const renderScene = new RenderPass(scene, camera);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-    bloomPass.threshold = 0; bloomPass.strength = 1.2; bloomPass.radius = 0.5;
-    composer = new EffectComposer(renderer);
-    composer.addPass(renderScene);
-    composer.addPass(bloomPass);
+    // Bloom Setup (Only if high spec)
+    if (SETTINGS.useBloom) {
+        const renderScene = new RenderPass(scene, camera);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.4, 0.85);
+        composer = new EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+    }
 
     document.addEventListener('mousemove', (e) => {
         mouseX = (e.clientX - window.innerWidth / 2) * 0.5;
         mouseY = (e.clientY - window.innerHeight / 2) * 0.5;
     });
+    
     animate();
 }
 
 function animate() {
     if(!document.getElementById('intro-overlay').style.display === 'none') return;
     requestAnimationFrame(animate);
+    
     camera.position.x += (mouseX - camera.position.x) * 0.05;
     camera.position.y += (-mouseY - camera.position.y) * 0.05;
     camera.lookAt(scene.position);
     particles.rotation.y += 0.001;
-    composer.render();
+
+    if (SETTINGS.useBloom) {
+        composer.render();
+    } else {
+        renderer.render(scene, camera);
+    }
 }
+
 init();
 </script>
 
 <script>
 let ringActive = true;
+
+// Preload
+function preloadImages(urls, callback) {
+    let loaded = 0;
+    const total = urls.length;
+    const progressBar = document.getElementById('progress-bar');
+    if(total === 0) { callback(); return; }
+    urls.forEach(url => {
+        const img = new Image();
+        img.onload = img.onerror = () => {
+            loaded++;
+            progressBar.style.width = (loaded / total) * 100 + "%";
+            if(loaded === total) callback();
+        };
+        img.src = url;
+    });
+}
 
 function buildRing() {
     const ringWrap = document.getElementById('ring-wrap');
@@ -302,103 +342,96 @@ function buildRing() {
     try { savedData = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e) { savedData = []; }
 
     let postersToDisplay = [];
+    
+    // 1. DETERMINE URLS (Use standard res for speed)
     if (savedData.length > 0) {
         const reversed = [...savedData].reverse();
         const slice = reversed.slice(0, 12);
         postersToDisplay = slice.map(m => {
-            let url = m.Poster && m.Poster !== "N/A" ? m.Poster : "https://via.placeholder.com/300x450/000000/FFFFFF?text=NO+IMG";
-            if(url.includes("SX300")) url = url.replace("SX300", "SX700");
-            return url;
+            return m.Poster && m.Poster !== "N/A" ? m.Poster : "https://via.placeholder.com/300x450/000000/FFFFFF?text=NO+IMG";
         });
     } else {
         const fallbacks = ["DUNE", "MATRIX", "BLADE RUNNER", "TRON", "AKIRA", "INTERSTELLAR", "ALIEN", "INCEPTION", "ARRIVAL", "EX MACHINA", "TENET", "ROBOCOP"];
         postersToDisplay = fallbacks.map(title => `https://via.placeholder.com/300x450/000000/FFFFFF?text=${encodeURIComponent(title)}`);
     }
 
-    const radius = 280; 
-    let rotation = 0;
-    const speed = 0.002; 
-    
-    const elements = postersToDisplay.map((url, index) => {
-        const el = document.createElement('div');
-        el.className = 'ring-item';
-        el.style.backgroundImage = `url(${url})`;
-        
-        // --- HOVER LOGIC: CLONE TO INSPECTOR ---
-        el.onmouseenter = () => {
-            ringWrap.classList.add('dimmed');
-            
-            const rect = el.getBoundingClientRect();
-            inspector.style.backgroundImage = el.style.backgroundImage;
-            inspector.style.display = 'block';
-            
-            // Set initial state (match current poster position)
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            const itemX = rect.left + rect.width/2;
-            const itemY = rect.top + rect.height/2;
-            
-            gsap.set(inspector, { 
-                x: itemX - centerX, 
-                y: itemY - centerY, 
-                scale: 1,
-                opacity: 1
-            });
+    // 2. PRELOAD
+    preloadImages(postersToDisplay, () => {
+        const loader = document.getElementById('loader');
+        loader.style.opacity = 0;
+        setTimeout(() => loader.style.display = 'none', 500);
+        document.getElementById('intro-overlay').style.opacity = 1;
 
-            // Animate OUT to Right Side
+        const radius = 280; 
+        let rotation = 0;
+        const speed = 0.002; 
+        
+        const elements = postersToDisplay.map((url, index) => {
+            const el = document.createElement('div');
+            el.className = 'ring-item';
+            el.style.backgroundImage = `url(${url})`;
+            
+            // --- GHOST LOGIC (SHARPENING) ---
+            el.onmouseenter = () => {
+                ringWrap.classList.add('dimmed');
+                const rect = el.getBoundingClientRect();
+                
+                // 1. Set Low Res First (Instant)
+                inspector.style.backgroundImage = `url(${url})`;
+                inspector.style.display = 'block';
+                
+                // 2. Load High Res in background silently
+                if(url.includes("SX300")) {
+                    let hiRes = url.replace("SX300", "SX700");
+                    let img = new Image();
+                    img.src = hiRes;
+                    img.onload = () => {
+                        if(inspector.style.display === 'block') {
+                            inspector.style.backgroundImage = `url(${hiRes})`;
+                        }
+                    };
+                }
+                
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                const itemX = rect.left + rect.width/2;
+                const itemY = rect.top + rect.height/2;
+                
+                gsap.set(inspector, { x: itemX - centerX, y: itemY - centerY, scale: 1, opacity: 1 });
+                gsap.to(inspector, { x: 350, y: 0, scale: 2.5, duration: 0.5, ease: "expo.out", force3D: true });
+            };
+            
+            ringWrap.appendChild(el);
+            return el;
+        });
+
+        // --- RETURN LOGIC ---
+        inspector.onmouseleave = () => {
+            // Fly back towards circle
             gsap.to(inspector, {
-                x: 350, 
-                y: 0,   
-                scale: 2.5,
-                duration: 0.5,
-                ease: "expo.out"
+                x: 100, scale: 0.8, opacity: 0, duration: 0.4, ease: "power2.in", force3D: true,
+                onComplete: () => {
+                    inspector.style.display = 'none';
+                    ringWrap.classList.remove('dimmed');
+                }
             });
         };
         
-        // REMOVED CLICK ENTRY ON POSTER
-        
-        ringWrap.appendChild(el);
-        return el;
+        // --- LOOP ---
+        function loop() {
+            if(!ringActive) return;
+            rotation += speed;
+            elements.forEach((el, index) => {
+                const offset = (index / elements.length) * Math.PI * 2;
+                const angle = rotation + offset;
+                // Force GPU
+                el.style.transform = `translate3d(${Math.cos(angle) * radius}px, ${Math.sin(angle) * radius}px, 0)`;
+            });
+            requestAnimationFrame(loop);
+        }
+        ringActive = true;
+        loop();
     });
-
-    // --- INSPECTOR LEAVE LOGIC (RETURN TO CIRCLE) ---
-    inspector.onmouseleave = () => {
-        // Fly back towards the Ring (Left) and fade out
-        gsap.to(inspector, {
-            x: 100, // Move back towards ring edge
-            scale: 0.8, // Shrink
-            opacity: 0,
-            duration: 0.4,
-            ease: "power2.in",
-            onComplete: () => {
-                inspector.style.display = 'none';
-                ringWrap.classList.remove('dimmed');
-            }
-        });
-    };
-    
-    // REMOVED INSPECTOR CLICK ENTRY
-
-    // --- ANIMATION LOOP ---
-    function loop() {
-        if(!ringActive) return;
-        rotation += speed;
-        
-        elements.forEach((el, index) => {
-            const offset = (index / elements.length) * Math.PI * 2;
-            const angle = rotation + offset;
-            
-            const x = Math.cos(angle) * radius;
-            const y = Math.sin(angle) * radius;
-            
-            el.style.transform = `translate(${x}px, ${y}px)`;
-        });
-        
-        requestAnimationFrame(loop);
-    }
-    
-    ringActive = true;
-    loop();
 }
 buildRing();
 
@@ -406,7 +439,6 @@ buildRing();
 // --- TRANSITIONS ---
 window.triggerEntry = () => {
     ringActive = false;
-    
     gsap.to('#ring-wrap', { scale: 3, opacity: 0, duration: 0.8, ease: "power2.in" });
     gsap.to('#inspector', { scale: 3, opacity: 0, duration: 0.8 }); 
     gsap.to('.center-title', { scale: 0.5, opacity: 0, duration: 0.5 });
@@ -441,12 +473,12 @@ window.triggerReturn = () => {
     }});
 };
 
-// ONLY THIS BUTTON TRIGGERS ENTRY
+// Only center text triggers entry
 document.getElementById('enter-trigger').onclick = window.triggerEntry;
 document.getElementById('return-btn').onclick = window.triggerReturn;
 
 
-// --- APP LOGIC (UNTOUCHED) ---
+// --- APP LOGIC ---
 const OMDB_KEY = "a274b977"; 
 const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
 window.appNotInitialized = true; 
@@ -473,6 +505,8 @@ const toast = document.getElementById('toast');
 window.onload = () => {
     const params = new URLSearchParams(location.search);
     if (params.get("view")) {
+        // Hide loader & intro immediately for shared views
+        document.getElementById('loader').style.display = 'none';
         document.getElementById('intro-overlay').style.display = 'none';
         document.getElementById('app-container').style.display = 'block';
         document.body.style.overflow = 'auto';
