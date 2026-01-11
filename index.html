@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>LAST DAY // FINAL COLOR</title>
+<title>LAST DAY // SHARED</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Syncopate:wght@700;800&display=swap" rel="stylesheet">
 
@@ -36,7 +36,11 @@ body {
     background: #000;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     transition: opacity 0.3s;
-    pointer-events: none;
+}
+.loader-text {
+    font-family: 'Syncopate', sans-serif; color: var(--primary);
+    font-size: 1rem; letter-spacing: 3px; margin-bottom: 20px;
+    text-transform: uppercase;
 }
 .loader-bar {
     width: 150px; height: 1px; background: #333; position: relative; overflow: hidden;
@@ -49,12 +53,13 @@ body {
 /* =========================
    PAGE 1: THE RING INTRO
    ========================= */
+/* HIDDEN BY DEFAULT to prevent flashing on shared links */
 #intro-overlay {
+    display: none; 
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     z-index: 9999; 
     background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 70%);
     overflow: hidden;
-    opacity: 0; transition: opacity 0.5s;
     perspective: 1000px;
 }
 
@@ -194,6 +199,7 @@ header {
 <body>
 
 <div id="loader">
+    <div class="loader-text">ACCESSING ARCHIVE</div>
     <div class="loader-bar"><div class="loader-progress" id="progress-bar"></div></div>
 </div>
 
@@ -226,9 +232,99 @@ header {
 </div>
 
 <script>
+// --- GLOBAL STATE ---
 let ringActive = true;
+let savedMovies = [];
+let isSharedMode = false;
 
-// Preload (Fast)
+// --- FIREBASE CONFIG ---
+const OMDB_KEY = "a274b977"; 
+const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCt6s0fVkb7DtQeq9H05wg_D0Lw_S10-0",
+    authDomain: "lastday-18.firebaseapp.com",
+    projectId: "lastday-18",
+    storageBucket: "lastday-18.firebasestorage.app",
+    messagingSenderId: "413600100426",
+    appId: "1:413600100426:web:c55e5c7fd46028a26236b3"
+};
+try { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } catch (e) { console.error("Firebase Init Error", e); }
+
+// --- DOM ELEMENTS ---
+const mainGrid = document.getElementById('main-grid');
+const emptyState = document.getElementById('empty-state');
+const searchOverlay = document.getElementById('search-overlay');
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+const toast = document.getElementById('toast');
+const loader = document.getElementById('loader');
+const introOverlay = document.getElementById('intro-overlay');
+const appContainer = document.getElementById('app-container');
+
+// --- STARTUP LOGIC ---
+window.onload = async () => {
+    const params = new URLSearchParams(location.search);
+    const viewId = params.get("view");
+    
+    if (viewId) {
+        // === SHARED MODE: FAST PATH ===
+        console.log("Shared Link Detected. Bypassing Intro.");
+        
+        // 1. Show simple loader immediately (Intro stays hidden)
+        document.querySelector('.loader-text').innerText = "DOWNLOADING SHARED LIST...";
+        
+        // 2. Fetch Data
+        await initSharedMode(viewId);
+    } else {
+        // === NORMAL MODE: SHOW INTRO ===
+        console.log("Normal Visit. Loading Intro.");
+        
+        // 1. Unhide intro div
+        introOverlay.style.display = 'block';
+        
+        // 2. Load Local Data & Build Ring
+        loadLocalData();
+        buildRing(); 
+    }
+};
+
+async function initSharedMode(viewId) {
+    isSharedMode = true;
+    document.getElementById('btn-import').style.display = 'flex';
+    document.getElementById('btn-share').innerHTML = `<span>COPY LINK</span> <span>©</span>`;
+    
+    // Wait for DB connection
+    if(!window.db) { setTimeout(()=>initSharedMode(viewId), 100); return; }
+
+    try {
+        const doc = await window.db.collection("shares").doc(viewId).get();
+        if (doc.exists) {
+            savedMovies = doc.data().movies;
+            // 3. Render directly to Page 2
+            render();
+            
+            // 4. Reveal Page 2 (Kill Loader)
+            gsap.to(loader, { opacity: 0, duration: 0.3, onComplete: () => loader.style.display = 'none' });
+            appContainer.style.display = 'block';
+            gsap.to(appContainer, { opacity: 1, duration: 0.5 });
+            
+        } else {
+            alert("LINK EXPIRED");
+            window.location.href = window.location.pathname; // Reset to local
+        }
+    } catch(err) {
+        console.error(err);
+        alert("CONNECTION ERROR");
+        window.location.href = window.location.pathname;
+    }
+}
+
+function loadLocalData() {
+    try { savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e) { savedMovies = []; }
+}
+
+// --- RING & PRELOADER LOGIC (FOR NORMAL VISITS) ---
 function preloadImages(urls, callback) {
     let loaded = 0;
     const total = urls.length;
@@ -250,14 +346,11 @@ function buildRing() {
     const inspector = document.getElementById('inspector');
     ringWrap.innerHTML = "";
     
-    let savedData = [];
-    try { savedData = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e) { savedData = []; }
-
     let postersToDisplay = [];
     
-    // 1. DETERMINE URLS (Standard Res for Ring - Fast)
-    if (savedData.length > 0) {
-        const reversed = [...savedData].reverse();
+    // 1. SELECT MOVIES (Local)
+    if (savedMovies.length > 0) {
+        const reversed = [...savedMovies].reverse();
         const slice = reversed.slice(0, 12);
         postersToDisplay = slice.map(m => {
             return m.Poster && m.Poster !== "N/A" ? m.Poster : "https://via.placeholder.com/300x450/000000/FFFFFF?text=NO+IMG";
@@ -267,12 +360,11 @@ function buildRing() {
         postersToDisplay = fallbacks.map(title => `https://via.placeholder.com/300x450/000000/FFFFFF?text=${encodeURIComponent(title)}`);
     }
 
-    // 2. PRELOAD LOW RES (Fast Boot)
+    // 2. PRELOAD & LAUNCH
     preloadImages(postersToDisplay, () => {
-        const loader = document.getElementById('loader');
-        loader.style.opacity = 0;
-        setTimeout(() => loader.style.display = 'none', 300);
-        document.getElementById('intro-overlay').style.opacity = 1;
+        // Hide Loader -> Show Ring
+        gsap.to(loader, { opacity: 0, duration: 0.3, onComplete: () => loader.style.display = 'none' });
+        gsap.to(introOverlay, { opacity: 1, duration: 0.5 });
 
         const radius = 280; 
         let rotation = 0;
@@ -283,24 +375,20 @@ function buildRing() {
             el.className = 'ring-item';
             el.style.backgroundImage = `url(${url})`;
             
-            // --- GHOST LOGIC (QUALITY SWAP) ---
+            // HOVER GHOST LOGIC
             el.onmouseenter = () => {
                 ringWrap.classList.add('dimmed');
                 const rect = el.getBoundingClientRect();
                 
-                // A. Instant Display (Low Res)
                 inspector.style.backgroundImage = `url(${url})`;
                 inspector.style.display = 'block';
                 
-                // B. Silent High-Res Fetch
+                // Silent High-Res Swap
                 if(url.includes("SX300")) {
                     let hiRes = url.replace("SX300", "SX1000"); 
-                    let img = new Image();
-                    img.src = hiRes;
+                    let img = new Image(); img.src = hiRes;
                     img.onload = () => {
-                        if(inspector.style.display === 'block') {
-                            inspector.style.backgroundImage = `url(${hiRes})`;
-                        }
+                        if(inspector.style.display === 'block') inspector.style.backgroundImage = `url(${hiRes})`;
                     };
                 }
                 
@@ -317,7 +405,7 @@ function buildRing() {
             return el;
         });
 
-        // --- RETURN LOGIC ---
+        // LEAVE
         inspector.onmouseleave = () => {
             gsap.to(inspector, {
                 x: 100, scale: 0.8, opacity: 0, duration: 0.3, ease: "power2.in", force3D: true,
@@ -328,14 +416,13 @@ function buildRing() {
             });
         };
         
-        // --- LOOP ---
+        // ANIMATION LOOP
         function loop() {
             if(!ringActive) return;
             rotation += speed;
             elements.forEach((el, index) => {
                 const offset = (index / elements.length) * Math.PI * 2;
                 const angle = rotation + offset;
-                // Force GPU
                 el.style.transform = `translate3d(${Math.cos(angle) * radius}px, ${Math.sin(angle) * radius}px, 0)`;
             });
             requestAnimationFrame(loop);
@@ -344,40 +431,41 @@ function buildRing() {
         loop();
     });
 }
-buildRing();
 
-
-// --- TRANSITIONS ---
+// --- PAGE TRANSITIONS (Normal Mode) ---
 window.triggerEntry = () => {
     ringActive = false;
+    render(); // Render local movies
+    
     gsap.to('#ring-wrap', { scale: 3, opacity: 0, duration: 0.6, ease: "power2.in" });
     gsap.to('#inspector', { scale: 3, opacity: 0, duration: 0.6 }); 
     gsap.to('.center-title', { scale: 0.5, opacity: 0, duration: 0.4 });
     
-    gsap.to('#intro-overlay', {
+    gsap.to(introOverlay, {
         opacity: 0, delay: 0.4, duration: 0.8,
-        onComplete: () => { document.getElementById('intro-overlay').style.display = 'none'; }
+        onComplete: () => { introOverlay.style.display = 'none'; }
     });
 
-    const app = document.getElementById('app-container');
-    app.style.display = 'block';
-    gsap.to(app, { opacity: 1, delay: 0.4, duration: 0.8 });
+    appContainer.style.display = 'block';
+    gsap.to(appContainer, { opacity: 1, delay: 0.4, duration: 0.8 });
     document.body.style.overflow = 'auto';
-
-    if(window.appNotInitialized) window.initAppLogic();
 };
 
 window.triggerReturn = () => {
-    const app = document.getElementById('app-container');
-    gsap.to(app, { opacity: 0, duration: 0.4, onComplete: () => {
-        app.style.display = 'none';
+    // If we are in shared mode, clicking return should probably just reset to local mode?
+    if(isSharedMode) {
+        window.location.href = window.location.pathname; // Reload to reset
+        return;
+    }
+
+    gsap.to(appContainer, { opacity: 0, duration: 0.4, onComplete: () => {
+        appContainer.style.display = 'none';
         document.body.style.overflow = 'hidden';
         
         buildRing(); 
 
-        const intro = document.getElementById('intro-overlay');
-        intro.style.display = 'block';
-        gsap.to(intro, { opacity: 1, duration: 0.4 });
+        introOverlay.style.display = 'block';
+        gsap.to(introOverlay, { opacity: 1, duration: 0.4 });
         
         gsap.to('#ring-wrap', { scale: 1, opacity: 1, duration: 0.4 });
         gsap.to('.center-title', { scale: 1, opacity: 1, duration: 0.4 });
@@ -388,87 +476,20 @@ document.getElementById('enter-trigger').onclick = window.triggerEntry;
 document.getElementById('return-btn').onclick = window.triggerReturn;
 
 
-// --- APP LOGIC ---
-const OMDB_KEY = "a274b977"; 
-const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
-window.appNotInitialized = true; 
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCt6s0fVkb7DtQeq9H05wg_D0Lw_S10-0",
-    authDomain: "lastday-18.firebaseapp.com",
-    projectId: "lastday-18",
-    storageBucket: "lastday-18.firebasestorage.app",
-    messagingSenderId: "413600100426",
-    appId: "1:413600100426:web:c55e5c7fd46028a26236b3"
-};
-try { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } catch (e) { console.error(e); }
-
-let savedMovies = [];
-let isSharedMode = false;
-const mainGrid = document.getElementById('main-grid');
-const emptyState = document.getElementById('empty-state');
-const searchOverlay = document.getElementById('search-overlay');
-const searchInput = document.getElementById('search-input');
-const searchResults = document.getElementById('search-results');
-const toast = document.getElementById('toast');
-
-window.onload = () => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("view")) {
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('intro-overlay').style.display = 'none';
-        document.getElementById('app-container').style.display = 'block';
-        document.body.style.overflow = 'auto';
-        window.initAppLogic();
-    }
-};
-
-window.initAppLogic = async () => {
-    window.appNotInitialized = false;
-    const params = new URLSearchParams(location.search);
-    const viewId = params.get("view");
-    const sessionData = sessionStorage.getItem("sharedMovies");
-
-    if (viewId) {
-        enableSharedMode();
-        showToast("DOWNLOADING ARCHIVE...");
-        await loadSharedData(viewId);
-    } else if (sessionData) {
-        enableSharedMode();
-        savedMovies = JSON.parse(sessionData);
-        window.history.replaceState({}, document.title, window.location.pathname);
-        render();
-    } else {
-        loadLocalData();
-        render();
-    }
-}
-
-function loadLocalData() { try { savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e) { savedMovies = []; } }
-
-function enableSharedMode() {
-    isSharedMode = true;
-    savedMovies = [];
-    document.getElementById('btn-import').style.display = 'flex';
-    document.getElementById('btn-share').innerHTML = `<span>COPY LINK</span> <span>©</span>`;
-}
-
+// --- APP LOGIC (Render, Search, Save) ---
 function render() {
     mainGrid.innerHTML = "";
     if (savedMovies.length === 0) { emptyState.style.display = 'flex'; return; }
     emptyState.style.display = 'none';
+    
     savedMovies.forEach((movie, index) => {
         const card = document.createElement('div'); card.className = 'card';
         let imgUrl = movie.Poster && movie.Poster !== "N/A" ? movie.Poster : PLACEHOLDER;
         if(imgUrl.includes("SX300")) imgUrl = imgUrl.replace("SX300", "SX700");
         
-        card.innerHTML = `
-            <img class="card-img" src="${imgUrl}" loading="lazy">
-            <div class="card-overlay">
-                <div class="card-title">${movie.Title}</div>
-                <div class="card-year">${movie.Year}</div>
-            </div>`;
-            
+        card.innerHTML = `<img class="card-img" src="${imgUrl}" loading="lazy"><div class="card-overlay"><div class="card-title">${movie.Title}</div><div class="card-year">${movie.Year}</div></div>`;
+        
+        // Deletion only allowed if NOT in shared mode
         if(!isSharedMode) { 
             card.oncontextmenu = (e) => { 
                 e.preventDefault(); 
@@ -487,7 +508,6 @@ document.getElementById('header-search-btn').onclick = () => {
 document.getElementById('close-search').onclick = () => { searchOverlay.style.display = 'none'; };
 document.addEventListener('keydown', (e) => { 
     if (e.key === 'Escape') searchOverlay.style.display = 'none'; 
-    if (e.key === 's' && document.activeElement !== searchInput && !isSharedMode) { e.preventDefault(); searchOverlay.style.display = 'flex'; searchInput.focus(); }
 });
 let debounceTimer; searchInput.oninput = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(performSearch, 500); };
 
@@ -508,18 +528,26 @@ async function performSearch() {
             data.Search.forEach(m => {
                 const el = document.createElement('div'); el.className = 'card'; el.style.border = "1px solid #333";
                 let imgUrl = m.Poster !== "N/A" ? m.Poster : PLACEHOLDER;
-                el.innerHTML = `
-                    <img class="card-img" src="${imgUrl}" style="filter:none;">
-                    <div class="card-overlay" style="transform:translateY(0)">
-                        <div class="card-title">ADD TO ARCHIVE +</div>
-                    </div>`;
+                el.innerHTML = `<img class="card-img" src="${imgUrl}" style="filter:none;"><div class="card-overlay" style="transform:translateY(0)"><div class="card-title">ADD TO ARCHIVE +</div></div>`;
                 el.onclick = () => addToLibrary(m); searchResults.appendChild(el);
             });
         } else { searchResults.innerHTML = `<div style="color:#666">NO DATA FOUND</div>`; }
     } catch(err) { searchResults.innerHTML = `<div style="color:red">CONNECTION ERROR</div>`; }
 }
-function addToLibrary(movie) { if (savedMovies.find(m => m.imdbID === movie.imdbID)) return showToast("ALREADY SAVED"); savedMovies.push(movie); localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); showToast(`SAVED: ${movie.Title}`); render(); }
-function removeMovie(id) { savedMovies = savedMovies.filter(m => m.imdbID !== id); localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); render(); showToast("DELETED"); }
+
+function addToLibrary(movie) { 
+    if (savedMovies.find(m => m.imdbID === movie.imdbID)) return showToast("ALREADY SAVED"); 
+    savedMovies.push(movie); 
+    localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); 
+    showToast(`SAVED: ${movie.Title}`); 
+    render(); 
+}
+
+function removeMovie(id) { 
+    savedMovies = savedMovies.filter(m => m.imdbID !== id); 
+    localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); 
+    render(); showToast("DELETED"); 
+}
 
 const btnShare = document.getElementById('btn-share');
 btnShare.onclick = async () => {
@@ -530,22 +558,20 @@ btnShare.onclick = async () => {
         if(!window.db) throw new Error("DB NOT READY");
         const shareId = Math.random().toString(36).substring(2, 9);
         await window.db.collection("shares").doc(shareId).set({ movies: savedMovies, createdAt: Date.now() });
-        copyToClipboard(`${window.location.origin}${window.location.pathname}?view=${shareId}`);
+        const link = `${window.location.origin}${window.location.pathname}?view=${shareId}`;
+        copyToClipboard(link);
     } catch(err) { console.error(err); showToast("ERROR"); } finally { setTimeout(() => btnShare.innerHTML = originalText, 2000); }
 };
-async function loadSharedData(id) {
-    if(!window.db) { setTimeout(()=>loadSharedData(id), 500); return; }
-    try { const doc = await window.db.collection("shares").doc(id).get();
-        if (doc.exists) { savedMovies = doc.data().movies; sessionStorage.setItem("sharedMovies", JSON.stringify(savedMovies)); window.location.href = window.location.pathname; } else { alert("LINK EXPIRED"); window.location.href = window.location.pathname; }
-    } catch(err) { alert("NETWORK ERROR"); }
-}
+
 document.getElementById('btn-import').onclick = () => {
     if(confirm("MERGE INTO YOUR ARCHIVE?")) {
         let current = []; try { current = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){}
         const merged = [...current, ...savedMovies].filter((obj, index, self) => index === self.findIndex((t) => t.imdbID === obj.imdbID));
-        localStorage.setItem("savedMovies", JSON.stringify(merged)); sessionStorage.removeItem("sharedMovies"); window.location.href = window.location.pathname;
+        localStorage.setItem("savedMovies", JSON.stringify(merged)); 
+        window.location.href = window.location.pathname; 
     }
 };
+
 function showToast(msg) { toast.innerText = msg; toast.style.right = "30px"; setTimeout(() => { toast.style.right = "-300px"; }, 3000); }
 function copyToClipboard(text) { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(() => showToast("LINK COPIED")); } else { prompt("COPY LINK:", text); } }
 </script>
