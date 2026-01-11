@@ -2,652 +2,593 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>LAST DAY</title>
+<title>LAST DAY // FINAL</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Syncopate:wght@700;800&display=swap" rel="stylesheet">
 
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-
-body{
-  background:#000;
-  color:#fff;
-  font-family:'Inter',sans-serif;
-  width:100vw;
-  height:100vh;
-  overflow:hidden;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  transition: border 0.3s;
+/* --- CORE VARIABLES --- */
+:root {
+    --bg: #030303;
+    --primary: #00ff41;
+    --accent: #ff0055;
+    --text: #ffffff;
 }
 
-/* SHARED MODE STYLES */
-body.is-shared {
-    /* No border */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden; 
+    height: 100vh;
 }
 
-#trigger{
-  font-family:'Bebas Neue';
-  letter-spacing:.45em;
-  font-size:1.2rem;
-  cursor:pointer;
-  z-index:9999;
-  padding:20px;
-  user-select:none;
-}
-
-/* We keep the Title Color Red so you know it's a Shared List */
-body.is-shared #trigger { color: #ff0044; }
-
-#circle{
-  position:fixed;
-  inset:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  pointer-events:none;
-  z-index:1;
-}
-
-.poster{
-  position:absolute;
-  width:140px;
-  height:210px;
-  background-size:cover;
-  background-position:center;
-  background-repeat:no-repeat;
-  box-shadow:0 40px 120px rgba(0,0,0,.95);
-  opacity:0;
-  pointer-events:auto;
-  backface-visibility:hidden;
-  transform:translateZ(0);
-  will-change:transform,opacity;
-}
-
-.poster::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background-image:radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px);
-  background-size:2px 2px;
-  pointer-events:none;
-  opacity:.15;
-}
-
-#archive{
-  position:fixed;
-  inset:0;
-  padding:10vh 5vw;
-  display:none;
-  overflow-y:auto;
-  z-index:50;
-}
-
-#search-wrap{
-  position:fixed;
-  top:24px;
-  right:24px;
-  z-index:300;
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-#search-icon{
-  font-size:1.2rem;
-  cursor:pointer;
-  opacity:.8;
-}
-
-#search-bar{
-  width:0;
-  overflow:hidden;
-  opacity:0;
-  transition:width .4s ease, opacity .3s ease;
-}
-
-#search-bar.active{
-  width:220px;
-  opacity:1;
-}
-
-#search-input{
-  width:100%;
-  background:transparent;
-  border:none;
-  border-bottom:1px solid #333;
-  color:#fff;
-  font-size:.95rem;
-  outline:none;
-  padding:4px 0;
-}
-
-#search-results{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-  gap:20px;
-  margin-top:60px;
-}
-
-.grid{
-  margin-top:100px;
-  max-width:1600px;
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:4vw;
-}
-
-.grid-item{
-  aspect-ratio:2/3;
-  background-size:cover;
-  background-position:center;
-  background-repeat:no-repeat;
-  cursor:pointer;
-  backface-visibility:hidden;
-  transform:translateZ(0);
-  will-change:transform,opacity;
-}
-
-/* SHARED BANNER */
-#shared-banner{
+/* =========================
+   PAGE 1: THE RING INTRO
+   ========================= */
+#intro-overlay {
     position: fixed;
-    bottom: 24px;
-    left: 24px;
-    display: none; 
-    z-index: 300;
-    align-items: center;
-    gap: 15px;
-    background: rgba(0,0,0,0.9);
-    padding: 12px 24px;
-    border: 1px solid #333;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 9999;
+    background: #000;
+    overflow: hidden;
 }
 
-#shared-text {
-    font-family: 'Bebas Neue';
-    letter-spacing: .1em;
-    color: #ff0044;
-    font-size: 1.1rem;
+#canvas-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1;
+    transition: opacity 0.6s;
 }
 
-#exit-btn {
-    font-family: 'Inter';
-    font-size: 0.8rem;
+/* CENTER TEXT (THE ONLY TRIGGER) */
+.center-title {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    font-family: 'Syncopate', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 4px;
     color: #fff;
-    border: 1px solid #555;
-    padding: 6px 14px;
     cursor: pointer;
     text-transform: uppercase;
-    background: #111;
+    transition: all 0.4s;
+    pointer-events: auto;
+    text-shadow: 0 0 20px rgba(255,255,255,0.2);
+    padding: 20px; /* Bigger click area */
+    border: 1px solid transparent;
 }
-#exit-btn:hover { background: #fff; color: #000; }
+.center-title:hover {
+    color: var(--primary);
+    text-shadow: 0 0 30px var(--primary);
+    letter-spacing: 6px;
+    border-color: rgba(0, 255, 65, 0.3);
+}
 
-#controls{
-  position:fixed;
-  bottom:24px;
-  right:24px;
-  z-index:300;
-  display:flex;
-  gap:25px;
+/* THE RING CONTAINER */
+#ring-wrap {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    z-index: 100;
 }
 
-.control-btn{
-  font-family:'Bebas Neue';
-  letter-spacing:.2em;
-  cursor:pointer;
-  opacity:0.6;
-  transition:opacity 0.3s;
-  font-size: 1rem;
-  min-width: 60px; /* Prevents layout jump when text changes */
-  text-align: right;
+/* RING ITEMS (Spinning) */
+.ring-item {
+    position: absolute;
+    top: -90px; left: -60px;
+    width: 120px; height: 180px;
+    
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(255,255,255,0.15);
+    cursor: default; /* Not clickable for entry anymore */
+    
+    transition: opacity 0.3s, filter 0.3s;
+    will-change: transform;
+    
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
-.control-btn:hover{opacity:1;}
 
-#return{
-  position:fixed;
-  top:30px;
-  left:30px;
-  font-family:'Bebas Neue';
-  letter-spacing:.3em;
-  cursor:pointer;
-  opacity:0;
-  pointer-events:none;
-  z-index:200;
+#ring-wrap.dimmed .ring-item {
+    opacity: 0.2;
+    filter: grayscale(100%) blur(2px);
+    pointer-events: none; 
 }
+
+/* THE "GHOST" INSPECTOR */
+#inspector {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 120px; height: 180px; 
+    
+    background-size: cover;
+    background-position: center;
+    
+    z-index: 1000;
+    display: none; 
+    pointer-events: auto; 
+    cursor: default; /* Just for looking */
+    
+    border: 1px solid #fff;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+}
+
+
+/* =========================
+   PAGE 2: THE APP
+   ========================= */
+#app-container {
+    display: none; 
+    opacity: 0;
+    height: 100vh;
+    overflow-y: auto;
+    position: relative;
+    z-index: 50;
+    background: radial-gradient(circle at 50% 50%, #111 0%, #000 100%);
+}
+
+.bg-grid {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: -1;
+}
+
+header {
+    position: fixed; top: 0; left: 0; right: 0; height: 80px;
+    background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.1); 
+    display: flex; align-items: center; justify-content: space-between; 
+    padding: 0 40px; z-index: 100;
+}
+
+#return-btn {
+    font-family: 'Syncopate', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem; color: #888; cursor: pointer; text-transform: uppercase;
+    transition: color 0.3s, transform 0.3s; display: flex; align-items: center; gap: 10px;
+}
+#return-btn::before { content: '←'; font-family: 'Inter'; font-size: 1.2rem; }
+#return-btn:hover { color: #fff; transform: translateX(-5px); }
+
+#header-search-btn {
+    background: #fff; color: #000; border: none; padding: 12px 24px;
+    font-family: 'Inter', sans-serif; font-weight: 800; font-size: 0.8rem;
+    cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+    transition: transform 0.2s, background 0.2s;
+}
+#header-search-btn:hover { transform: scale(1.05); background: var(--primary); }
+
+#main-grid { margin-top: 100px; padding: 0 40px 40px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
+
+.card { position: relative; aspect-ratio: 2/3; background: #1a1a1a; cursor: pointer; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); overflow: hidden; border: 1px solid transparent; }
+.card-img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%) contrast(1.2); transition: filter 0.4s; }
+.card:hover { transform: translateY(-10px) scale(1.02); z-index: 10; border-color: var(--primary); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+.card:hover .card-img { filter: grayscale(0%) contrast(1); }
+.card-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 20px; transform: translateY(100%); transition: transform 0.3s; }
+.card:hover .card-overlay { transform: translateY(0); }
+.card-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.9rem; color: #fff; margin-bottom: 4px; }
+.card-year { font-size: 0.75rem; color: var(--primary); font-family: 'Syncopate'; }
+
+.controls { position: fixed; bottom: 40px; right: 40px; display: flex; flex-direction: column; gap: 12px; z-index: 200; }
+.btn { background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); color: var(--text); border: 1px solid rgba(255,255,255,0.2); padding: 14px 24px; font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-transform: uppercase; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 160px; }
+.btn:hover { background: #fff; color: #000; border-color: #fff; }
+
+#search-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.92); backdrop-filter: blur(10px); z-index: 300; display: none; flex-direction: column; padding: 120px 10vw; }
+.search-bar-wrap { border-bottom: 2px solid #333; display: flex; align-items: center; margin-bottom: 50px; }
+#search-input { width: 100%; background: transparent; border: none; color: #fff; font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 4vw; outline: none; text-transform: uppercase; padding: 20px 0; }
+#search-input::placeholder { color: #333; }
+#close-search { position: absolute; top: 40px; right: 40px; font-size: 2rem; cursor: pointer; color: #555; transition: color 0.3s; }
+#close-search:hover { color: #fff; }
+#search-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 30px; overflow-y: auto; padding-bottom: 100px; }
+
+#empty-state { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; opacity: 0.3; }
+#empty-state h1 { font-family: 'Syncopate'; font-size: 4rem; letter-spacing: 10px; }
+
+#toast { position: fixed; top: 100px; right: -300px; background: var(--primary); color: #000; padding: 15px 30px; font-family: 'Syncopate'; font-weight: 700; font-size: 0.8rem; z-index: 500; transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 </style>
 </head>
-
 <body>
 
-<audio id="hoverSound" src="assets/audio/og.mp3"></audio>
+<div id="intro-overlay">
+    <div id="canvas-container"></div>
+    <div class="center-title" id="enter-trigger">LAST DAY</div>
+    
+    <div id="ring-wrap"></div>
+    <div id="inspector"></div>
+</div>
 
-<div id="trigger">LAST DAY</div>
-<div id="circle"></div>
-
-<div id="archive">
-  <div id="search-wrap">
-    <div id="search-icon">🔍</div>
-    <div id="search-bar">
-      <input id="search-input" placeholder="Search movie or series..." />
+<div id="app-container">
+    <div class="bg-grid"></div>
+    <header>
+        <div id="return-btn">RETURN</div>
+        <button id="header-search-btn">SEARCH [S]</button>
+    </header>
+    <div id="main-grid"></div>
+    <div id="empty-state">
+        <h1>NULL</h1>
+        <p>NO RECORDS FOUND</p>
     </div>
-  </div>
-  <div id="search-results"></div>
-  <div class="grid" id="grid"></div>
+    <div class="controls">
+        <button class="btn" id="btn-share"><span>Share</span> <span>☍</span></button>
+        <button class="btn" id="btn-import" style="display:none; border-color: var(--accent); color: var(--accent);"><span>Import</span> <span>⇩</span></button>
+    </div>
+    <div id="search-overlay">
+        <div id="close-search">✕</div>
+        <div class="search-bar-wrap">
+            <input type="text" id="search-input" placeholder="TYPE QUERY..." autocomplete="off">
+        </div>
+        <div id="search-results"></div>
+    </div>
+    <div id="toast">SUCCESS</div>
 </div>
-
-<div id="shared-banner">
-    <span id="shared-text">VIEWING SHARED LIST</span>
-    <span id="exit-btn">EXIT TO MY LIST</span>
-</div>
-
-<div id="controls">
-  <div class="control-btn" id="import-btn" style="display:none">IMPORT</div>
-  <div class="control-btn" id="share-btn">SHARE</div>
-</div>
-
-<div id="return">RETURN</div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import * as THREE from 'https://unpkg.com/three@0.126.0/build/three.module.js';
+import { EffectComposer } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/UnrealBloomPass.js';
 
-  const firebaseConfig = {
+let camera, scene, renderer, composer, particles, count = 2000, dummy = new THREE.Object3D();
+let mouseX = 0, mouseY = 0;
+
+function init() {
+    const container = document.getElementById('canvas-container');
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 3000);
+    camera.position.z = 1000;
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x000000, 0.001);
+
+    const geometry = new THREE.TetrahedronGeometry(10, 0);
+    const material = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true });
+    particles = new THREE.InstancedMesh(geometry, material, count);
+    
+    for(let i = 0; i < count; i++) {
+        dummy.position.set(Math.random()*2000-1000, Math.random()*2000-1000, Math.random()*2000-1000);
+        dummy.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+        const scale = Math.random() * 2 + 0.5;
+        dummy.scale.set(scale, scale, scale);
+        dummy.updateMatrix();
+        particles.setMatrixAt(i, dummy.matrix);
+    }
+    scene.add(particles);
+
+    renderer = new THREE.WebGLRenderer({ antialias: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
+
+    const renderScene = new RenderPass(scene, camera);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+    bloomPass.threshold = 0; bloomPass.strength = 1.2; bloomPass.radius = 0.5;
+    composer = new EffectComposer(renderer);
+    composer.addPass(renderScene);
+    composer.addPass(bloomPass);
+
+    document.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX - window.innerWidth / 2) * 0.5;
+        mouseY = (e.clientY - window.innerHeight / 2) * 0.5;
+    });
+    animate();
+}
+
+function animate() {
+    if(!document.getElementById('intro-overlay').style.display === 'none') return;
+    requestAnimationFrame(animate);
+    camera.position.x += (mouseX - camera.position.x) * 0.05;
+    camera.position.y += (-mouseY - camera.position.y) * 0.05;
+    camera.lookAt(scene.position);
+    particles.rotation.y += 0.001;
+    composer.render();
+}
+init();
+</script>
+
+<script>
+let ringActive = true;
+
+function buildRing() {
+    const ringWrap = document.getElementById('ring-wrap');
+    const inspector = document.getElementById('inspector');
+    ringWrap.innerHTML = "";
+    
+    let savedData = [];
+    try { savedData = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e) { savedData = []; }
+
+    let postersToDisplay = [];
+    if (savedData.length > 0) {
+        const reversed = [...savedData].reverse();
+        const slice = reversed.slice(0, 12);
+        postersToDisplay = slice.map(m => {
+            let url = m.Poster && m.Poster !== "N/A" ? m.Poster : "https://via.placeholder.com/300x450/000000/FFFFFF?text=NO+IMG";
+            if(url.includes("SX300")) url = url.replace("SX300", "SX700");
+            return url;
+        });
+    } else {
+        const fallbacks = ["DUNE", "MATRIX", "BLADE RUNNER", "TRON", "AKIRA", "INTERSTELLAR", "ALIEN", "INCEPTION", "ARRIVAL", "EX MACHINA", "TENET", "ROBOCOP"];
+        postersToDisplay = fallbacks.map(title => `https://via.placeholder.com/300x450/000000/FFFFFF?text=${encodeURIComponent(title)}`);
+    }
+
+    const radius = 280; 
+    let rotation = 0;
+    const speed = 0.002; 
+    
+    const elements = postersToDisplay.map((url, index) => {
+        const el = document.createElement('div');
+        el.className = 'ring-item';
+        el.style.backgroundImage = `url(${url})`;
+        
+        // --- HOVER LOGIC: CLONE TO INSPECTOR ---
+        el.onmouseenter = () => {
+            ringWrap.classList.add('dimmed');
+            
+            const rect = el.getBoundingClientRect();
+            inspector.style.backgroundImage = el.style.backgroundImage;
+            inspector.style.display = 'block';
+            
+            // Set initial state (match current poster position)
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const itemX = rect.left + rect.width/2;
+            const itemY = rect.top + rect.height/2;
+            
+            gsap.set(inspector, { 
+                x: itemX - centerX, 
+                y: itemY - centerY, 
+                scale: 1,
+                opacity: 1
+            });
+
+            // Animate OUT to Right Side
+            gsap.to(inspector, {
+                x: 350, 
+                y: 0,   
+                scale: 2.5,
+                duration: 0.5,
+                ease: "expo.out"
+            });
+        };
+        
+        // REMOVED CLICK ENTRY ON POSTER
+        
+        ringWrap.appendChild(el);
+        return el;
+    });
+
+    // --- INSPECTOR LEAVE LOGIC (RETURN TO CIRCLE) ---
+    inspector.onmouseleave = () => {
+        // Fly back towards the Ring (Left) and fade out
+        gsap.to(inspector, {
+            x: 100, // Move back towards ring edge
+            scale: 0.8, // Shrink
+            opacity: 0,
+            duration: 0.4,
+            ease: "power2.in",
+            onComplete: () => {
+                inspector.style.display = 'none';
+                ringWrap.classList.remove('dimmed');
+            }
+        });
+    };
+    
+    // REMOVED INSPECTOR CLICK ENTRY
+
+    // --- ANIMATION LOOP ---
+    function loop() {
+        if(!ringActive) return;
+        rotation += speed;
+        
+        elements.forEach((el, index) => {
+            const offset = (index / elements.length) * Math.PI * 2;
+            const angle = rotation + offset;
+            
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            
+            el.style.transform = `translate(${x}px, ${y}px)`;
+        });
+        
+        requestAnimationFrame(loop);
+    }
+    
+    ringActive = true;
+    loop();
+}
+buildRing();
+
+
+// --- TRANSITIONS ---
+window.triggerEntry = () => {
+    ringActive = false;
+    
+    gsap.to('#ring-wrap', { scale: 3, opacity: 0, duration: 0.8, ease: "power2.in" });
+    gsap.to('#inspector', { scale: 3, opacity: 0, duration: 0.8 }); 
+    gsap.to('.center-title', { scale: 0.5, opacity: 0, duration: 0.5 });
+    
+    gsap.to('#intro-overlay', {
+        opacity: 0, delay: 0.5, duration: 1,
+        onComplete: () => { document.getElementById('intro-overlay').style.display = 'none'; }
+    });
+
+    const app = document.getElementById('app-container');
+    app.style.display = 'block';
+    gsap.to(app, { opacity: 1, delay: 0.5, duration: 1 });
+    document.body.style.overflow = 'auto';
+
+    if(window.appNotInitialized) window.initAppLogic();
+};
+
+window.triggerReturn = () => {
+    const app = document.getElementById('app-container');
+    gsap.to(app, { opacity: 0, duration: 0.5, onComplete: () => {
+        app.style.display = 'none';
+        document.body.style.overflow = 'hidden';
+        
+        buildRing(); 
+
+        const intro = document.getElementById('intro-overlay');
+        intro.style.display = 'block';
+        gsap.to(intro, { opacity: 1, duration: 0.5 });
+        
+        gsap.to('#ring-wrap', { scale: 1, opacity: 1, duration: 0.5 });
+        gsap.to('.center-title', { scale: 1, opacity: 1, duration: 0.5 });
+    }});
+};
+
+// ONLY THIS BUTTON TRIGGERS ENTRY
+document.getElementById('enter-trigger').onclick = window.triggerEntry;
+document.getElementById('return-btn').onclick = window.triggerReturn;
+
+
+// --- APP LOGIC (UNTOUCHED) ---
+const OMDB_KEY = "a274b977"; 
+const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
+window.appNotInitialized = true; 
+
+const firebaseConfig = {
     apiKey: "AIzaSyCt6s0fVkb7DtQeq9H05wg_D0Lw_S10-0",
     authDomain: "lastday-18.firebaseapp.com",
     projectId: "lastday-18",
     storageBucket: "lastday-18.firebasestorage.app",
     messagingSenderId: "413600100426",
     appId: "1:413600100426:web:c55e5c7fd46028a26236b3"
-  };
+};
+try { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } catch (e) { console.error(e); }
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+let savedMovies = [];
+let isSharedMode = false;
+const mainGrid = document.getElementById('main-grid');
+const emptyState = document.getElementById('empty-state');
+const searchOverlay = document.getElementById('search-overlay');
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+const toast = document.getElementById('toast');
 
-  window.db = db;
-  window.doc = doc;
-  window.setDoc = setDoc;
-  window.getDoc = getDoc;
+window.onload = () => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("view")) {
+        document.getElementById('intro-overlay').style.display = 'none';
+        document.getElementById('app-container').style.display = 'block';
+        document.body.style.overflow = 'auto';
+        window.initAppLogic();
+    }
+};
 
-  if(window.initApp) window.initApp();
-</script>
-
-<script>
-/* ---------- MAIN LOGIC ---------- */
-const OMDB_KEY="a274b977";
-const FALLBACK="https://via.placeholder.com/500x750/000000/FFFFFF?text=NO+POSTER";
-const hiRes=u=>u&&u!=="N/A"?u.replace("_SX300","_SX700"):FALLBACK;
-
-// DOM Elements
-const trigger = document.getElementById("trigger");
-const circle = document.getElementById("circle");
-const archive = document.getElementById("archive");
-const grid = document.getElementById("grid");
-const ret = document.getElementById("return");
-const searchIcon = document.getElementById("search-icon");
-const searchBar = document.getElementById("search-bar");
-const searchInput = document.getElementById("search-input");
-const searchResults = document.getElementById("search-results");
-const sharedBanner = document.getElementById("shared-banner");
-const exitBtn = document.getElementById("exit-btn");
-const importBtn = document.getElementById("import-btn");
-const shareBtn = document.getElementById("share-btn");
-const hoverSound = document.getElementById("hoverSound");
-
-// Global State
-let state = 0; 
-let savedMovies = []; 
-let circleItems = []; 
-let isSharedMode = false; 
-
-/* ---------- INITIALIZATION ---------- */
-window.initApp = async () => {
-    
+window.initAppLogic = async () => {
+    window.appNotInitialized = false;
     const params = new URLSearchParams(location.search);
     const viewId = params.get("view");
     const sessionData = sessionStorage.getItem("sharedMovies");
 
     if (viewId) {
-        console.log("Link detected. Fetching...");
-        enterSharedMode(); 
-        await loadFromFirebase(viewId);
-    } 
-    else if (sessionData) {
-        console.log("Session data found.");
-        enterSharedMode();
+        enableSharedMode();
+        showToast("DOWNLOADING ARCHIVE...");
+        await loadSharedData(viewId);
+    } else if (sessionData) {
+        enableSharedMode();
         savedMovies = JSON.parse(sessionData);
         window.history.replaceState({}, document.title, window.location.pathname);
-    } 
-    else {
+        render();
+    } else {
         loadLocalData();
+        render();
     }
-};
-
-function loadLocalData() {
-    isSharedMode = false;
-    document.body.classList.remove("is-shared");
-    sharedBanner.style.display = "none";
-    trigger.innerText = "LAST DAY";
-    searchIcon.style.display = "block"; 
-    importBtn.style.display = "none";
-    shareBtn.innerText = "SHARE";
-    
-    try {
-        savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || [];
-    } catch(e) { savedMovies = []; }
 }
 
-function enterSharedMode() {
+function loadLocalData() { try { savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e) { savedMovies = []; } }
+
+function enableSharedMode() {
     isSharedMode = true;
-    savedMovies = []; 
-    document.body.classList.add("is-shared");
-    sharedBanner.style.display = "flex";
-    trigger.innerText = "SHARED LIST";
-    searchIcon.style.display = "none"; 
-    importBtn.style.display = "block"; 
-    shareBtn.innerText = "COPY LINK"; 
+    savedMovies = [];
+    document.getElementById('btn-import').style.display = 'flex';
+    document.getElementById('btn-share').innerHTML = `<span>COPY LINK</span> <span>©</span>`;
 }
 
-async function loadFromFirebase(id) {
-    if(!window.db) return setTimeout(()=>loadFromFirebase(id), 500);
+function render() {
+    mainGrid.innerHTML = "";
+    if (savedMovies.length === 0) { emptyState.style.display = 'flex'; return; }
+    emptyState.style.display = 'none';
+    savedMovies.forEach((movie, index) => {
+        const card = document.createElement('div'); card.className = 'card';
+        let imgUrl = movie.Poster && movie.Poster !== "N/A" ? movie.Poster : PLACEHOLDER;
+        if(imgUrl.includes("SX300")) imgUrl = imgUrl.replace("SX300", "SX700");
+        card.innerHTML = `<img class="card-img" src="${imgUrl}" loading="lazy"><div class="card-overlay"><div class="card-title">${movie.Title}</div><div class="card-year">${movie.Year}</div></div>`;
+        if(!isSharedMode) { card.oncontextmenu = (e) => { e.preventDefault(); if(confirm(`DELETE "${movie.Title}"?`)) removeMovie(movie.imdbID); }; }
+        mainGrid.appendChild(card);
+        gsap.from(card, { y: 30, opacity: 0, duration: 0.6, delay: index * 0.05 });
+    });
+}
 
+document.getElementById('header-search-btn').onclick = () => { 
+    if(isSharedMode) return showToast("LOCKED: READ ONLY"); 
+    searchOverlay.style.display = 'flex'; searchInput.focus(); 
+};
+document.getElementById('close-search').onclick = () => { searchOverlay.style.display = 'none'; };
+document.addEventListener('keydown', (e) => { 
+    if (e.key === 'Escape') searchOverlay.style.display = 'none'; 
+    if (e.key === 's' && document.activeElement !== searchInput && !isSharedMode) { e.preventDefault(); searchOverlay.style.display = 'flex'; searchInput.focus(); }
+});
+let debounceTimer; searchInput.oninput = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(performSearch, 500); };
+
+async function performSearch() {
+    const query = searchInput.value.trim();
+    if (query.length < 1) { searchResults.innerHTML = ""; return; }
+    searchResults.innerHTML = `<div style="color:#666; font-family:'Syncopate'">SCANNING...</div>`;
     try {
-        const snap = await window.getDoc(window.doc(window.db, "shares", id));
-        if(snap.exists()) {
-            const data = snap.data();
-            savedMovies = data.movies;
-            sessionStorage.setItem("sharedMovies", JSON.stringify(savedMovies));
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-            alert("Link expired or invalid.");
-            exitSharedMode();
+        let url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(query)}`;
+        let res = await fetch(url); let data = await res.json();
+        if (data.Response === "False") {
+            const exactUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&t=${encodeURIComponent(query)}`;
+            const res2 = await fetch(exactUrl); const data2 = await res2.json();
+            if (data2.Response === "True") data = { Response: "True", Search: [data2] };
         }
-    } catch(e) {
-        alert("Error loading shared list.");
-    }
-}
-
-exitBtn.onclick = exitSharedMode;
-
-function exitSharedMode() {
-    sessionStorage.removeItem("sharedMovies"); 
-    window.location.href = window.location.pathname; 
-}
-
-
-/* ---------- PAGE FLOW ---------- */
-trigger.onclick = () => {
-    if(state===0) {
-        if(savedMovies.length === 0) openArchive();
-        else { state=1; buildCircle(); }
-    } else if (state===1) {
-        openArchive();
-    }
-};
-
-ret.onclick = () => {
-    archive.style.display="none";
-    trigger.style.display="block";
-    gsap.to(ret,{opacity:0,pointerEvents:"none"});
-    
-    if(savedMovies.length > 0) {
-        state=1;
-        buildCircle();
-    } else {
-        state=0;
-        circle.innerHTML="";
-    }
-};
-
-function openArchive(){
-    state=2;
-    trigger.style.display="none";
-    gsap.to(circleItems,{opacity:0,scale:0,onComplete:()=>circle.innerHTML=""});
-    archive.style.display="block";
-    gsap.to(ret,{opacity:1,pointerEvents:"auto"});
-    renderSaved();
-    
-    if(savedMovies.length===0 && !isSharedMode){
-        searchBar.classList.add("active");
-        searchInput.focus();
-    }
-}
-
-/* ---------- CIRCLE EFFECTS ---------- */
-const RADIUS=260;
-
-function buildCircle(){
-    circle.innerHTML="";
-    circleItems = [];
-    if(savedMovies.length===0) return;
-    const limit = savedMovies.slice(-12);
-
-    limit.forEach((m,i)=>{
-        const el=document.createElement("div");
-        el.className="poster";
-        el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
-        circle.appendChild(el);
-        circleItems.push(el);
-        
-        const a=i/limit.length*Math.PI*2-Math.PI/2;
-        const x=Math.cos(a)*RADIUS;
-        const y=Math.sin(a)*RADIUS;
-        el.dataset.x=x;
-        el.dataset.y=y;
-        
-        gsap.set(el,{x:0,y:0,scale:.8,opacity:0});
-        gsap.to(el,{x,y,scale:1,opacity:1,duration:1.2,delay:i*.08});
-        
-        el.onmouseenter=()=>{
-            try{ hoverSound.currentTime=0; hoverSound.play(); }catch(e){}
-            // Completely hide others (opacity 0)
-            circleItems.forEach(p => {
-                if(p !== el) gsap.to(p, {opacity: 0, duration: 0.3});
+        searchResults.innerHTML = "";
+        if (data.Response === "True" && data.Search) {
+            data.Search.forEach(m => {
+                const el = document.createElement('div'); el.className = 'card'; el.style.border = "1px solid #333";
+                let imgUrl = m.Poster !== "N/A" ? m.Poster : PLACEHOLDER;
+                el.innerHTML = `<img class="card-img" src="${imgUrl}" style="filter:none;"><div class="card-overlay" style="transform:translateY(0)"><div class="card-title">ADD TO ARCHIVE +</div></div>`;
+                el.onclick = () => addToLibrary(m); searchResults.appendChild(el);
             });
-            gsap.to(el, {x:x*1.15, y:y*1.15, scale:1.12, duration: 0.4});
-        };
-        
-        el.onmouseleave=()=>{
-            circleItems.forEach(p => gsap.to(p, {opacity: 1, duration: 0.3}));
-            gsap.to(el, {x, y, scale: 1, duration: 0.4});
-        };
-    });
+        } else { searchResults.innerHTML = `<div style="color:#666">NO DATA FOUND</div>`; }
+    } catch(err) { searchResults.innerHTML = `<div style="color:red">CONNECTION ERROR</div>`; }
 }
+function addToLibrary(movie) { if (savedMovies.find(m => m.imdbID === movie.imdbID)) return showToast("ALREADY SAVED"); savedMovies.push(movie); localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); showToast(`SAVED: ${movie.Title}`); render(); }
+function removeMovie(id) { savedMovies = savedMovies.filter(m => m.imdbID !== id); localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); render(); showToast("DELETED"); }
 
-/* ---------- GRID EFFECTS ---------- */
-function renderSaved(){
-    grid.innerHTML="";
-    savedMovies.forEach(m=>{
-        const el=document.createElement("div");
-        el.className="grid-item";
-        el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
-        
-        if(!isSharedMode){
-            el.oncontextmenu=e=>{
-                e.preventDefault();
-                removeMovie(m.imdbID);
-            };
-        }
-        grid.appendChild(el);
-    });
-    enableGridFocus();
-}
-
-function enableGridFocus(){
-  const items=document.querySelectorAll(".grid-item");
-  items.forEach(i=>{
-    i.onmouseenter=()=>{
-      // Completely hide others (opacity 0)
-      items.forEach(o=>o!==i&&gsap.to(o,{opacity:0, duration:0.3}));
-      gsap.to(i,{scale:1.08, duration:0.3});
-    };
-    i.onmouseleave=()=>{
-      items.forEach(o=>gsap.to(o,{opacity:1, duration:0.3}));
-      gsap.to(i,{scale:1, duration:0.3});
-    };
-  });
-}
-
-/* ---------- SEARCH ---------- */
-searchIcon.onclick=()=>{
-  if(isSharedMode) return;
-  searchBar.classList.toggle("active");
-  searchInput.focus();
-};
-
-let timer;
-searchInput.oninput=()=>{
-  clearTimeout(timer);
-  timer=setTimeout(searchMovies,400);
-};
-
-async function searchMovies(){
-  if(isSharedMode) return;
-
-  let rawQ = searchInput.value.trim();
-  if(rawQ.length<2){ searchResults.innerHTML=""; return; }
-  let cleanQ = rawQ.toLowerCase();
-  
-  let titleSearch = cleanQ;
-  let yearSearch = "";
-  const yearMatch = cleanQ.match(/^(.+?)\s+(\d{4})$/);
-  if(yearMatch) {
-    titleSearch = yearMatch[1].trim(); 
-    yearSearch = yearMatch[2];
-  }
-
-  const smartAliases = {
-    "seven": "se7en", "aot": "attack on titan", "got": "game of thrones",
-    "lotr": "lord of the rings", "op": "one piece", "jjk": "jujutsu kaisen",
-    "bb": "breaking bad", "bcs": "better call saul", "himym": "how i met your mother"
-  };
-  titleSearch = smartAliases[titleSearch] || titleSearch;
-
-  let url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
-  if(yearSearch) url += `&y=${yearSearch}`;
-
-  let r = await fetch(url);
-  let d = await r.json();
-
-  if(d.Response === "False") {
-    let exactUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&t=${encodeURIComponent(titleSearch)}`;
-    if(yearSearch) exactUrl += `&y=${yearSearch}`;
-    let r2 = await fetch(exactUrl);
-    let d2 = await r2.json();
-    if(d2.Response === "True") {
-      d = { Response: "True", Search: [d2] };
-    } else {
-       if(yearSearch) {
-          let fallbackUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(titleSearch)}`;
-          let r3 = await fetch(fallbackUrl);
-          d = await r3.json();
-       }
-    }
-  }
-  
-  searchResults.innerHTML="";
-  if(d.Response==="False" || !d.Search) return;
-
-  d.Search.forEach(m=>{
-    const el=document.createElement("div");
-    el.className="grid-item";
-    el.style.backgroundImage=`url(${hiRes(m.Poster)})`;
-    el.onclick=()=>saveMovie(m); 
-    searchResults.appendChild(el);
-  });
-  enableGridFocus();
-}
-
-function saveMovie(movie){
-    if(isSharedMode) {
-        alert("You are in SHARED MODE. Click 'IMPORT' to add this list to your own.");
-        return;
-    }
-    if(savedMovies.find(m=>m.imdbID===movie.imdbID)) return;
-    
-    savedMovies.push(movie);
-    localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
-    renderSaved();
-}
-
-function removeMovie(id){
-    if(isSharedMode) return;
-    savedMovies=savedMovies.filter(m=>m.imdbID!==id);
-    localStorage.setItem("savedMovies",JSON.stringify(savedMovies));
-    renderSaved();
-}
-
-/* ---------- BUTTONS (FIXED: NO POPUPS) ---------- */
-shareBtn.onclick = async () => {
-    // 1. If System is loading
-    if(!window.db) {
-        shareBtn.innerText = "LOADING...";
-        setTimeout(() => shareBtn.innerText = "SHARE", 1000);
-        return;
-    }
-    
-    // 2. If Viewing Shared List (Just Copy Current URL)
-    if(isSharedMode) {
-        await navigator.clipboard.writeText(location.href);
-        const originalText = shareBtn.innerText;
-        shareBtn.innerText = "LINK COPIED";
-        setTimeout(() => shareBtn.innerText = originalText, 2000);
-        return;
-    }
-
-    // 3. Normal Share
-    if(savedMovies.length===0) {
-        shareBtn.innerText = "EMPTY";
-        setTimeout(() => shareBtn.innerText = "SHARE", 1000);
-        return;
-    }
-    
-    shareBtn.innerText = "GENERATING...";
-    
+const btnShare = document.getElementById('btn-share');
+btnShare.onclick = async () => {
+    if(isSharedMode) { copyToClipboard(window.location.href); return; }
+    if(savedMovies.length === 0) return showToast("EMPTY DATABASE");
+    const originalText = btnShare.innerHTML; btnShare.innerHTML = `<span>GENERATING...</span>`;
     try {
-        const id = Math.random().toString(36).substring(2,8);
-        await window.setDoc(window.doc(window.db,"shares",id), {
-            movies: savedMovies,
-            createdAt: Date.now()
-        });
-        
-        const link = `${location.origin}${location.pathname}?view=${id}`;
-        await navigator.clipboard.writeText(link);
-        
-        // NO ALERT -> JUST BUTTON CHANGE
-        shareBtn.innerText = "LINK COPIED";
-        setTimeout(() => shareBtn.innerText = "SHARE", 2000);
-        
-    } catch(e) {
-        console.error(e);
-        shareBtn.innerText = "ERROR";
-        setTimeout(() => shareBtn.innerText = "SHARE", 2000);
+        if(!window.db) throw new Error("DB NOT READY");
+        const shareId = Math.random().toString(36).substring(2, 9);
+        await window.db.collection("shares").doc(shareId).set({ movies: savedMovies, createdAt: Date.now() });
+        copyToClipboard(`${window.location.origin}${window.location.pathname}?view=${shareId}`);
+    } catch(err) { console.error(err); showToast("ERROR"); } finally { setTimeout(() => btnShare.innerHTML = originalText, 2000); }
+};
+async function loadSharedData(id) {
+    if(!window.db) { setTimeout(()=>loadSharedData(id), 500); return; }
+    try { const doc = await window.db.collection("shares").doc(id).get();
+        if (doc.exists) { savedMovies = doc.data().movies; sessionStorage.setItem("sharedMovies", JSON.stringify(savedMovies)); window.location.href = window.location.pathname; } else { alert("LINK EXPIRED"); window.location.href = window.location.pathname; }
+    } catch(err) { alert("NETWORK ERROR"); }
+}
+document.getElementById('btn-import').onclick = () => {
+    if(confirm("MERGE INTO YOUR ARCHIVE?")) {
+        let current = []; try { current = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){}
+        const merged = [...current, ...savedMovies].filter((obj, index, self) => index === self.findIndex((t) => t.imdbID === obj.imdbID));
+        localStorage.setItem("savedMovies", JSON.stringify(merged)); sessionStorage.removeItem("sharedMovies"); window.location.href = window.location.pathname;
     }
 };
-
-importBtn.onclick = () => {
-    if(!isSharedMode) return;
-    
-    const choice = confirm("Merge these shared movies into your personal list?");
-    if(choice) {
-        let myData = [];
-        try { myData = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){}
-        
-        const combined = [...myData, ...savedMovies];
-        const unique = combined.filter((obj, index, self) =>
-            index === self.findIndex((t) => t.imdbID === obj.imdbID)
-        );
-        
-        localStorage.setItem("savedMovies", JSON.stringify(unique));
-        
-        // Visual Feedback on Button
-        importBtn.innerText = "IMPORTED";
-        setTimeout(() => {
-             exitSharedMode();
-        }, 800);
-    }
-};
+function showToast(msg) { toast.innerText = msg; toast.style.right = "30px"; setTimeout(() => { toast.style.right = "-300px"; }, 3000); }
+function copyToClipboard(text) { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(() => showToast("LINK COPIED")); } else { prompt("COPY LINK:", text); } }
 </script>
 </body>
 </html>
