@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>LAST DAY // FINAL SYSTEM</title>
+<title>LAST DAY // SPEED</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Syncopate:wght@700;800&display=swap" rel="stylesheet">
 
@@ -13,7 +13,7 @@
 <style>
 /* --- CORE VARIABLES --- */
 :root {
-    --bg: #030303;
+    --bg: #050505;
     --primary: #00ff41;
     --accent: #ff0055;
     --text: #ffffff;
@@ -29,41 +29,42 @@ body {
 }
 
 /* =========================
-   LOADER
+   FAST LOADER
    ========================= */
 #loader {
     position: fixed; inset: 0; z-index: 10000;
     background: #000;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    transition: opacity 0.5s;
+    transition: opacity 0.3s;
     pointer-events: none;
 }
-.loader-text {
-    font-family: 'Syncopate', sans-serif; color: var(--primary);
-    font-size: 1.5rem; letter-spacing: 5px; margin-bottom: 20px;
-    text-transform: uppercase;
-}
 .loader-bar {
-    width: 200px; height: 2px; background: #333; position: relative; overflow: hidden;
+    width: 150px; height: 1px; background: #333; position: relative; overflow: hidden;
 }
 .loader-progress {
     position: absolute; top: 0; left: 0; height: 100%; width: 0%;
-    background: var(--primary); transition: width 0.2s;
+    background: var(--primary); transition: width 0.1s linear;
 }
 
 /* =========================
-   PAGE 1: THE RING INTRO
+   PAGE 1: THE RING INTRO (CSS BG)
    ========================= */
 #intro-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    z-index: 9999; background: #000; overflow: hidden;
-    opacity: 0; transition: opacity 1s;
-    perspective: 1200px; /* Deep 3D Space */
+    z-index: 9999; 
+    /* CSS-ONLY BACKGROUND (Zero Lag) */
+    background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 70%);
+    overflow: hidden;
+    opacity: 0; transition: opacity 0.5s;
+    perspective: 1000px;
 }
 
-#canvas-container {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 1; transition: opacity 0.6s;
+/* Subtle Grid Texture */
+#intro-overlay::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px; pointer-events: none;
 }
 
 /* CENTER TEXT */
@@ -73,9 +74,9 @@ body {
     z-index: 50;
     font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 0.9rem;
     letter-spacing: 4px; color: #fff; cursor: pointer; text-transform: uppercase;
-    transition: all 0.4s; pointer-events: auto;
+    transition: all 0.3s; pointer-events: auto;
     text-shadow: 0 0 20px rgba(255,255,255,0.2);
-    padding: 40px; /* Large hit area */
+    padding: 40px; 
 }
 .center-title:hover {
     color: var(--primary); text-shadow: 0 0 40px var(--primary); letter-spacing: 6px;
@@ -86,7 +87,7 @@ body {
     position: absolute; top: 50%; left: 50%; width: 0; height: 0; z-index: 100;
 }
 
-/* RING ITEMS */
+/* RING ITEMS (Low Res / Fast) */
 .ring-item {
     position: absolute; top: -90px; left: -60px;
     width: 120px; height: 180px;
@@ -94,32 +95,27 @@ body {
     border: 1px solid rgba(255,255,255,0.15);
     cursor: default;
     
-    /* PERFORMANCE OPTIMIZATION */
-    will-change: transform, opacity; 
-    backface-visibility: hidden; 
+    /* Hardware Acceleration */
+    will-change: transform; 
     transform: translateZ(0); 
     
-    transition: opacity 0.3s, filter 0.3s;
+    transition: opacity 0.2s, filter 0.2s;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
 #ring-wrap.dimmed .ring-item {
-    opacity: 0.2; filter: grayscale(100%) blur(2px); pointer-events: none; 
+    opacity: 0.15; filter: grayscale(100%) blur(1px); pointer-events: none; 
 }
 
-/* THE "GHOST" INSPECTOR */
+/* THE "GHOST" INSPECTOR (High Res / Crisp) */
 #inspector {
     position: absolute; top: 50%; left: 50%;
     width: 120px; height: 180px; 
-    
     background-size: cover; background-position: center;
     
-    /* Sharpness & Speed */
-    image-rendering: -webkit-optimize-contrast; 
-    will-change: transform;
-    backface-visibility: hidden;
-    transform: translateZ(0);
-
+    /* Optimize for Quality */
+    image-rendering: -webkit-optimize-contrast;
+    
     z-index: 1000; display: none; pointer-events: auto; cursor: default;
     border: 1px solid #fff; box-shadow: 0 30px 80px rgba(0,0,0,0.9);
 }
@@ -131,7 +127,7 @@ body {
 #app-container {
     display: none; opacity: 0; height: 100vh; overflow-y: auto;
     position: relative; z-index: 50;
-    background: radial-gradient(circle at 50% 50%, #111 0%, #000 100%);
+    background: #080808;
 }
 .bg-grid {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -140,7 +136,7 @@ body {
 }
 header {
     position: fixed; top: 0; left: 0; right: 0; height: 80px;
-    background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px);
+    background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255,255,255,0.1); 
     display: flex; align-items: center; justify-content: space-between; 
     padding: 0 40px; z-index: 100;
@@ -162,20 +158,19 @@ header {
 #header-search-btn:hover { transform: scale(1.05); background: var(--primary); }
 
 #main-grid { margin-top: 100px; padding: 0 40px 40px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
-.card { position: relative; aspect-ratio: 2/3; background: #1a1a1a; cursor: pointer; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); overflow: hidden; border: 1px solid transparent; }
-.card-img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%) contrast(1.2); transition: filter 0.4s; }
-.card:hover { transform: translateY(-10px) scale(1.02); z-index: 10; border-color: var(--primary); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-.card:hover .card-img { filter: grayscale(0%) contrast(1); }
-.card-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 20px; transform: translateY(100%); transition: transform 0.3s; }
+.card { position: relative; aspect-ratio: 2/3; background: #1a1a1a; cursor: pointer; transition: transform 0.2s; overflow: hidden; border: 1px solid #333; }
+.card-img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: filter 0.3s; }
+.card:hover { transform: translateY(-5px); z-index: 10; border-color: var(--primary); }
+.card:hover .card-img { filter: grayscale(0%); }
+.card-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.9); padding: 15px; transform: translateY(100%); transition: transform 0.2s; }
 .card:hover .card-overlay { transform: translateY(0); }
-.card-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.9rem; color: #fff; margin-bottom: 4px; }
-.card-year { font-size: 0.75rem; color: var(--primary); font-family: 'Syncopate'; }
+.card-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.8rem; color: #fff; }
 
 .controls { position: fixed; bottom: 40px; right: 40px; display: flex; flex-direction: column; gap: 12px; z-index: 200; }
-.btn { background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); color: var(--text); border: 1px solid rgba(255,255,255,0.2); padding: 14px 24px; font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-transform: uppercase; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 160px; }
-.btn:hover { background: #fff; color: #000; border-color: #fff; }
+.btn { background: #000; color: var(--text); border: 1px solid #333; padding: 14px 24px; font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-transform: uppercase; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 160px; }
+.btn:hover { background: #fff; color: #000; }
 
-#search-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.92); backdrop-filter: blur(10px); z-index: 300; display: none; flex-direction: column; padding: 120px 10vw; }
+#search-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 300; display: none; flex-direction: column; padding: 120px 10vw; }
 .search-bar-wrap { border-bottom: 2px solid #333; display: flex; align-items: center; margin-bottom: 50px; }
 #search-input { width: 100%; background: transparent; border: none; color: #fff; font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 4vw; outline: none; text-transform: uppercase; padding: 20px 0; }
 #search-input::placeholder { color: #333; }
@@ -190,12 +185,10 @@ header {
 <body>
 
 <div id="loader">
-    <div class="loader-text">SYSTEM BOOT</div>
     <div class="loader-bar"><div class="loader-progress" id="progress-bar"></div></div>
 </div>
 
 <div id="intro-overlay">
-    <div id="canvas-container"></div>
     <div class="center-title" id="enter-trigger">LAST DAY</div>
     <div id="ring-wrap"></div>
     <div id="inspector"></div>
@@ -223,100 +216,10 @@ header {
     <div id="toast">SUCCESS</div>
 </div>
 
-<script type="module">
-import * as THREE from 'https://unpkg.com/three@0.126.0/build/three.module.js';
-import { EffectComposer } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/UnrealBloomPass.js';
-
-let camera, scene, renderer, composer, particles;
-let mouseX = 0, mouseY = 0;
-
-// DETECT LOW SPEC DEVICES (Mobiles or Small Screens)
-const isLowSpec = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 900;
-
-// CONFIGURE SETTINGS
-const SETTINGS = {
-    particleCount: isLowSpec ? 300 : 1500, // Reduce load on weak devices
-    useBloom: !isLowSpec,                  // Disable heavy glow on weak devices
-    pixelRatio: isLowSpec ? 1 : Math.min(window.devicePixelRatio, 2) // Cap resolution
-};
-
-function init() {
-    const container = document.getElementById('canvas-container');
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 3000);
-    camera.position.z = 1000;
-    
-    scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.001);
-
-    const geometry = new THREE.TetrahedronGeometry(10, 0);
-    const material = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true });
-    
-    // Create Particles
-    particles = new THREE.InstancedMesh(geometry, material, SETTINGS.particleCount);
-    const dummy = new THREE.Object3D();
-    
-    for(let i = 0; i < SETTINGS.particleCount; i++) {
-        dummy.position.set(Math.random()*2000-1000, Math.random()*2000-1000, Math.random()*2000-1000);
-        dummy.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
-        const scale = Math.random() * 2 + 0.5;
-        dummy.scale.set(scale, scale, scale);
-        dummy.updateMatrix();
-        particles.setMatrixAt(i, dummy.matrix);
-    }
-    scene.add(particles);
-
-    // Renderer Setup
-    renderer = new THREE.WebGLRenderer({ 
-        antialias: !isLowSpec, 
-        powerPreference: "high-performance",
-        alpha: false 
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(SETTINGS.pixelRatio);
-    container.appendChild(renderer.domElement);
-
-    // Bloom Setup (Only if high spec)
-    if (SETTINGS.useBloom) {
-        const renderScene = new RenderPass(scene, camera);
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.4, 0.85);
-        composer = new EffectComposer(renderer);
-        composer.addPass(renderScene);
-        composer.addPass(bloomPass);
-    }
-
-    document.addEventListener('mousemove', (e) => {
-        mouseX = (e.clientX - window.innerWidth / 2) * 0.5;
-        mouseY = (e.clientY - window.innerHeight / 2) * 0.5;
-    });
-    
-    animate();
-}
-
-function animate() {
-    if(!document.getElementById('intro-overlay').style.display === 'none') return;
-    requestAnimationFrame(animate);
-    
-    camera.position.x += (mouseX - camera.position.x) * 0.05;
-    camera.position.y += (-mouseY - camera.position.y) * 0.05;
-    camera.lookAt(scene.position);
-    particles.rotation.y += 0.001;
-
-    if (SETTINGS.useBloom) {
-        composer.render();
-    } else {
-        renderer.render(scene, camera);
-    }
-}
-
-init();
-</script>
-
 <script>
 let ringActive = true;
 
-// Preload
+// Preload (Fast)
 function preloadImages(urls, callback) {
     let loaded = 0;
     const total = urls.length;
@@ -343,7 +246,7 @@ function buildRing() {
 
     let postersToDisplay = [];
     
-    // 1. DETERMINE URLS (Use standard res for speed)
+    // 1. DETERMINE URLS (Standard Res for Ring - Fast)
     if (savedData.length > 0) {
         const reversed = [...savedData].reverse();
         const slice = reversed.slice(0, 12);
@@ -355,11 +258,11 @@ function buildRing() {
         postersToDisplay = fallbacks.map(title => `https://via.placeholder.com/300x450/000000/FFFFFF?text=${encodeURIComponent(title)}`);
     }
 
-    // 2. PRELOAD
+    // 2. PRELOAD LOW RES (Fast Boot)
     preloadImages(postersToDisplay, () => {
         const loader = document.getElementById('loader');
         loader.style.opacity = 0;
-        setTimeout(() => loader.style.display = 'none', 500);
+        setTimeout(() => loader.style.display = 'none', 300);
         document.getElementById('intro-overlay').style.opacity = 1;
 
         const radius = 280; 
@@ -371,22 +274,24 @@ function buildRing() {
             el.className = 'ring-item';
             el.style.backgroundImage = `url(${url})`;
             
-            // --- GHOST LOGIC (SHARPENING) ---
+            // --- GHOST LOGIC (QUALITY SWAP) ---
             el.onmouseenter = () => {
                 ringWrap.classList.add('dimmed');
                 const rect = el.getBoundingClientRect();
                 
-                // 1. Set Low Res First (Instant)
+                // A. Instant Display (Low Res)
                 inspector.style.backgroundImage = `url(${url})`;
                 inspector.style.display = 'block';
                 
-                // 2. Load High Res in background silently
+                // B. Silent High-Res Fetch
                 if(url.includes("SX300")) {
-                    let hiRes = url.replace("SX300", "SX700");
-                    let img = new Image();
-                    img.src = hiRes;
-                    img.onload = () => {
-                        if(inspector.style.display === 'block') {
+                    // Try to fetch bigger image
+                    const hiRes = url.replace("SX300", "SX1000"); // Attempt 1000px width
+                    const hdImg = new Image();
+                    hdImg.src = hiRes;
+                    hdImg.onload = () => {
+                        // Only replace if user is still looking at it
+                        if(inspector.style.display === 'block' && inspector.style.backgroundImage.includes(url)) {
                             inspector.style.backgroundImage = `url(${hiRes})`;
                         }
                     };
@@ -398,7 +303,7 @@ function buildRing() {
                 const itemY = rect.top + rect.height/2;
                 
                 gsap.set(inspector, { x: itemX - centerX, y: itemY - centerY, scale: 1, opacity: 1 });
-                gsap.to(inspector, { x: 350, y: 0, scale: 2.5, duration: 0.5, ease: "expo.out", force3D: true });
+                gsap.to(inspector, { x: 350, y: 0, scale: 2.5, duration: 0.4, ease: "power2.out", force3D: true });
             };
             
             ringWrap.appendChild(el);
@@ -407,9 +312,8 @@ function buildRing() {
 
         // --- RETURN LOGIC ---
         inspector.onmouseleave = () => {
-            // Fly back towards circle
             gsap.to(inspector, {
-                x: 100, scale: 0.8, opacity: 0, duration: 0.4, ease: "power2.in", force3D: true,
+                x: 100, scale: 0.8, opacity: 0, duration: 0.3, ease: "power2.in", force3D: true,
                 onComplete: () => {
                     inspector.style.display = 'none';
                     ringWrap.classList.remove('dimmed');
@@ -439,18 +343,18 @@ buildRing();
 // --- TRANSITIONS ---
 window.triggerEntry = () => {
     ringActive = false;
-    gsap.to('#ring-wrap', { scale: 3, opacity: 0, duration: 0.8, ease: "power2.in" });
-    gsap.to('#inspector', { scale: 3, opacity: 0, duration: 0.8 }); 
-    gsap.to('.center-title', { scale: 0.5, opacity: 0, duration: 0.5 });
+    gsap.to('#ring-wrap', { scale: 3, opacity: 0, duration: 0.6, ease: "power2.in" });
+    gsap.to('#inspector', { scale: 3, opacity: 0, duration: 0.6 }); 
+    gsap.to('.center-title', { scale: 0.5, opacity: 0, duration: 0.4 });
     
     gsap.to('#intro-overlay', {
-        opacity: 0, delay: 0.5, duration: 1,
+        opacity: 0, delay: 0.4, duration: 0.8,
         onComplete: () => { document.getElementById('intro-overlay').style.display = 'none'; }
     });
 
     const app = document.getElementById('app-container');
     app.style.display = 'block';
-    gsap.to(app, { opacity: 1, delay: 0.5, duration: 1 });
+    gsap.to(app, { opacity: 1, delay: 0.4, duration: 0.8 });
     document.body.style.overflow = 'auto';
 
     if(window.appNotInitialized) window.initAppLogic();
@@ -458,7 +362,7 @@ window.triggerEntry = () => {
 
 window.triggerReturn = () => {
     const app = document.getElementById('app-container');
-    gsap.to(app, { opacity: 0, duration: 0.5, onComplete: () => {
+    gsap.to(app, { opacity: 0, duration: 0.4, onComplete: () => {
         app.style.display = 'none';
         document.body.style.overflow = 'hidden';
         
@@ -466,19 +370,18 @@ window.triggerReturn = () => {
 
         const intro = document.getElementById('intro-overlay');
         intro.style.display = 'block';
-        gsap.to(intro, { opacity: 1, duration: 0.5 });
+        gsap.to(intro, { opacity: 1, duration: 0.4 });
         
-        gsap.to('#ring-wrap', { scale: 1, opacity: 1, duration: 0.5 });
-        gsap.to('.center-title', { scale: 1, opacity: 1, duration: 0.5 });
+        gsap.to('#ring-wrap', { scale: 1, opacity: 1, duration: 0.4 });
+        gsap.to('.center-title', { scale: 1, opacity: 1, duration: 0.4 });
     }});
 };
 
-// Only center text triggers entry
 document.getElementById('enter-trigger').onclick = window.triggerEntry;
 document.getElementById('return-btn').onclick = window.triggerReturn;
 
 
-// --- APP LOGIC ---
+// --- APP LOGIC (Same Robust Features) ---
 const OMDB_KEY = "a274b977"; 
 const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
 window.appNotInitialized = true; 
@@ -505,7 +408,6 @@ const toast = document.getElementById('toast');
 window.onload = () => {
     const params = new URLSearchParams(location.search);
     if (params.get("view")) {
-        // Hide loader & intro immediately for shared views
         document.getElementById('loader').style.display = 'none';
         document.getElementById('intro-overlay').style.display = 'none';
         document.getElementById('app-container').style.display = 'block';
