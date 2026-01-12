@@ -133,12 +133,26 @@ header {
 #return-btn:hover { color: #fff; transform: translateX(-5px); }
 
 #header-search-btn {
-    background: #fff; color: #000; border: none; padding: 12px 24px;
-    font-family: 'Inter', sans-serif; font-weight: 800; font-size: 0.8rem;
-    cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
-    transition: transform 0.2s, background 0.2s;
+    background: transparent; 
+    border: none; 
+    padding: 10px;
+    cursor: pointer; 
+    transition: transform 0.2s, color 0.2s;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-#header-search-btn:hover { transform: scale(1.05); background: var(--primary); }
+#header-search-btn svg {
+    width: 28px;
+    height: 28px;
+    fill: currentColor;
+    transition: fill 0.3s;
+}
+#header-search-btn:hover { 
+    transform: scale(1.1); 
+    color: var(--primary); 
+}
 
 #main-grid { margin-top: 100px; padding: 0 40px 40px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
 
@@ -185,7 +199,6 @@ header {
     padding: 0; 
 }
 
-/* Fixed Header for Search Input */
 .search-header-fixed {
     width: 100%;
     padding: 40px 40px 20px 40px;
@@ -213,7 +226,6 @@ header {
 }
 #close-search:hover { color: #fff; }
 
-/* Scrollable Results Area */
 #search-scroll-area {
     flex-grow: 1;
     overflow-y: auto;
@@ -231,7 +243,6 @@ header {
 #empty-state { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; opacity: 0.3; }
 #empty-state h1 { font-family: 'Syncopate'; font-size: 4rem; letter-spacing: 10px; }
 
-/* --- FIX: USE TRANSFORM TO HIDE 100% OFF SCREEN --- */
 #toast { 
     position: fixed; 
     top: 100px; 
@@ -267,7 +278,9 @@ header {
     <div class="bg-grid"></div>
     <header>
         <div id="return-btn">RETURN</div>
-        <button id="header-search-btn">SEARCH [S]</button>
+        <button id="header-search-btn" title="Search [S]">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </button>
     </header>
     <div id="main-grid"></div>
     <div id="empty-state"><h1>NULL</h1><p>NO RECORDS FOUND</p></div>
@@ -279,7 +292,7 @@ header {
     <div id="search-overlay">
         <div class="search-header-fixed">
             <div class="search-bar-wrap">
-                <input type="text" id="search-input" placeholder="Enter Movie Title" autocomplete="off">
+                <input type="text" id="search-input" placeholder="suicidal" autocomplete="off">
             </div>
             <div id="close-search">✕</div>
         </div>
@@ -397,15 +410,10 @@ function loadLocalData() {
     try { savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e) { savedMovies = []; }
 }
 
-// --- OPTIMIZED IMAGE LOADER ---
 function getOptimizedUrl(path, type = 'grid') {
     if(!path) return PLACEHOLDER;
     if(path.startsWith('http')) return path;
-    
-    // SEARCH: w185 (close to w200) + 50% Quality. Fast but decent.
-    if(type === 'search') return `${PROXY_BASE}w185${path}&output=webp&q=50`;
-    
-    // GRID: w500 (Good Quality) + 80% Quality
+    if(type === 'search') return `${PROXY_BASE}w154${path}&output=webp&q=50`;
     return `${PROXY_BASE}w500${path}&output=webp&q=80`;
 }
 
@@ -535,38 +543,69 @@ async function performSearch() {
     searchResults.innerHTML = `<div style="color:#666; font-family:'Syncopate'">SCANNING...</div>`;
     
     try {
-        let url = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=false`;
+        let url;
+        const isImdbId = /^tt\d+$/.test(query);
+
+        if (isImdbId) {
+            url = `https://api.themoviedb.org/3/find/${query}?api_key=${TMDB_KEY}&external_source=imdb_id`;
+        } else {
+            // MULTI + ADULT
+            url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=true`;
+        }
+
         let res = await fetch(url);
         let data = await res.json();
         
         searchResults.innerHTML = "";
         
-        if (data.results && data.results.length > 0) {
-            data.results.forEach(m => {
+        let results = isImdbId ? [...(data.movie_results || []), ...(data.tv_results || [])] : data.results;
+
+        if (results && results.length > 0) {
+            results.forEach(m => {
+                if(m.media_type === 'person') return;
                 if(!m.poster_path) return;
+
                 const el = document.createElement('div'); el.className = 'card'; el.style.border = "1px solid #333";
                 
-                // === SMART LOAD: Low Res first, High Res on Hover ===
-                let lowResUrl = `${PROXY_BASE}w185${m.poster_path}&output=webp&q=50`; // Initial fuzzy load (Fast)
-                let highResUrl = `${PROXY_BASE}w342${m.poster_path}&output=webp&q=80`; // Hover load (Sharp)
+                let lowResUrl = `${PROXY_BASE}w154${m.poster_path}&output=webp&q=50`; 
+                let highResUrl = `${PROXY_BASE}w342${m.poster_path}&output=webp&q=80`;
                 
-                let year = m.release_date ? m.release_date.split('-')[0] : "N/A";
+                // --- TIMELINE LOGIC ---
+                let title = m.title || m.name; 
+                let date = m.release_date || m.first_air_date;
+                let startYear = date ? date.split('-')[0] : "N/A";
                 
-                el.innerHTML = `<img class="card-img" src="${lowResUrl}" loading="lazy" decoding="async" style="filter:none;"><div class="card-overlay"><div class="card-title">${m.title}</div><div class="card-year">${year}</div></div>`;
+                // ID for fetching updates
+                let yearDisplayId = `year-${m.id}`;
+                let yearText = startYear;
+
+                // If TV, show "2016-" initially and fetch details
+                if(m.media_type === 'tv' && startYear !== "N/A") {
+                    yearText = `${startYear}-`; 
+                    fetchTVStatus(m.id, yearDisplayId, startYear); // BACKGROUND FETCH
+                }
+
+                el.innerHTML = `<img class="card-img" src="${lowResUrl}" loading="lazy" decoding="async" style="filter:none;"><div class="card-overlay"><div class="card-title">${title}</div><div class="card-year" id="${yearDisplayId}">${yearText}</div></div>`;
                 
-                // Hover Event: Upgrade Image quality
                 el.onmouseenter = function() {
                     const img = this.querySelector('img');
                     if(img.src !== highResUrl) img.src = highResUrl;
                 };
 
                 const movieObj = {
-                    Title: m.title,
-                    Year: year,
+                    Title: title,
+                    Year: yearText, // Save the updated range if possible
                     Poster: m.poster_path, 
                     imdbID: m.id.toString()
                 };
-                el.onclick = () => addToLibrary(movieObj); 
+                
+                // Dynamic update of save object on click to capture latest year text
+                el.onclick = function() {
+                    const currentYearText = document.getElementById(yearDisplayId).innerText;
+                    movieObj.Year = currentYearText;
+                    addToLibrary(movieObj);
+                }; 
+                
                 searchResults.appendChild(el);
             });
         } else { 
@@ -576,6 +615,27 @@ async function performSearch() {
         console.error(err);
         searchResults.innerHTML = `<div style="color:red">CONNECTION ERROR</div>`; 
     }
+}
+
+// --- NEW FUNCTION: BACKGROUND TV STATUS FETCH ---
+async function fetchTVStatus(id, elementId, startYear) {
+    try {
+        let res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${TMDB_KEY}`);
+        let data = await res.json();
+        const el = document.getElementById(elementId);
+        if(el) {
+            if(data.status === "Ended" || data.status === "Canceled") {
+                let endYear = data.last_air_date ? data.last_air_date.split('-')[0] : "";
+                if(endYear && endYear !== startYear) {
+                    el.innerText = `${startYear}-${endYear}`;
+                } else {
+                    el.innerText = startYear; // Miniseries same year
+                }
+            } else {
+                el.innerText = `${startYear}-`; // Ongoing
+            }
+        }
+    } catch(e) { /* Ignore errors, keep default */ }
 }
 
 function addToLibrary(movie) { 
@@ -620,15 +680,12 @@ if(btnImport) {
     };
 }
 
-// --- FINAL FIX: USE TRANSFORM TO HIDE COMPLETELY ---
 function showToast(msg) { 
-    clearTimeout(toastTimer); // Prevent stacking
+    clearTimeout(toastTimer); 
     toast.innerText = msg; 
-    toast.style.transform = "translateX(0)"; // SHOW
-    
-    // Wait 1.5s then slide out
+    toast.style.transform = "translateX(0)"; 
     toastTimer = setTimeout(() => { 
-        toast.style.transform = "translateX(120%)"; // HIDE COMPLETELY
+        toast.style.transform = "translateX(120%)"; 
     }, 1500); 
 }
 
