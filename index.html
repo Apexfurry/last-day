@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <title>LAST DAY</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://wsrv.nl">
+<link rel="dns-prefetch" href="https://wsrv.nl">
+<link rel="preconnect" href="https://image.tmdb.org">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Syncopate:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -50,7 +54,7 @@ body {
 }
 
 /* =========================
-   PAGE 1: INTRO (Hidden on Share)
+   PAGE 1: INTRO
    ========================= */
 #intro-overlay {
     display: none; 
@@ -146,8 +150,9 @@ header {
 }
 .card-img { 
     width: 100%; height: 100%; object-fit: cover; 
-    filter: grayscale(0%); /* Full Color */
+    filter: grayscale(0%); 
     transition: transform 0.4s;
+    background: #111; 
 }
 .card:hover { 
     transform: translateY(-8px); z-index: 10; 
@@ -170,14 +175,13 @@ header {
 .btn:hover { background: #fff; color: #000; }
 
 /* =========================
-   SEARCH OVERLAY (FIXED: FULL GRID)
+   SEARCH OVERLAY
    ========================= */
 #search-overlay { 
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
     background: rgba(5,5,5,0.98); 
     z-index: 300; 
     display: none; flex-direction: column; 
-    /* Removed large side padding */
     padding: 0; 
 }
 
@@ -213,12 +217,11 @@ header {
 #search-scroll-area {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 40px; /* Same padding as main grid */
+    padding: 40px; 
 }
 
 #search-results { 
     display: grid; 
-    /* MATCHING MAIN GRID EXACTLY */
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
     gap: 30px; 
     padding-bottom: 100px; 
@@ -227,7 +230,24 @@ header {
 
 #empty-state { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; opacity: 0.3; }
 #empty-state h1 { font-family: 'Syncopate'; font-size: 4rem; letter-spacing: 10px; }
-#toast { position: fixed; top: 100px; right: -300px; background: var(--primary); color: #000; padding: 15px 30px; font-family: 'Syncopate'; font-weight: 700; font-size: 0.8rem; z-index: 500; transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+/* --- FIX: USE TRANSFORM TO HIDE 100% OFF SCREEN --- */
+#toast { 
+    position: fixed; 
+    top: 100px; 
+    right: 30px; 
+    background: var(--primary); 
+    color: #000; 
+    padding: 15px 30px; 
+    font-family: 'Syncopate'; 
+    font-weight: 700; 
+    font-size: 0.8rem; 
+    z-index: 500; 
+    cursor: pointer;
+    transform: translateX(120%); 
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    will-change: transform;
+}
 </style>
 </head>
 <body>
@@ -259,7 +279,7 @@ header {
     <div id="search-overlay">
         <div class="search-header-fixed">
             <div class="search-bar-wrap">
-                <input type="text" id="search-input" placeholder="Kumawat Bitch" autocomplete="off">
+                <input type="text" id="search-input" placeholder="Enter Movie Title" autocomplete="off">
             </div>
             <div id="close-search">✕</div>
         </div>
@@ -276,11 +296,14 @@ header {
 let ringActive = true;
 let savedMovies = [];
 let isSharedMode = false;
+let toastTimer = null; 
 
-// --- FIREBASE CONFIG ---
-const OMDB_KEY = "a274b977"; 
+// --- CONFIGURATION ---
+const TMDB_KEY = "c968ffe14a9765f4d45f36e4d87b27b2";
 const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
+const PROXY_BASE = "https://wsrv.nl/?url=https://image.tmdb.org/t/p/"; 
 
+// --- FIREBASE INIT ---
 const firebaseConfig = {
     apiKey: "AIzaSyCt6s0fVkb7DtQeq9H05wg_D0Lw_S10-0",
     authDomain: "lastday-18.firebaseapp.com",
@@ -289,40 +312,68 @@ const firebaseConfig = {
     messagingSenderId: "413600100426",
     appId: "1:413600100426:web:c55e5c7fd46028a26236b3"
 };
-try { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } catch (e) { console.error("Firebase Init Error", e); }
+try { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } catch (e) { console.warn("Firebase offline"); }
 
 // --- DOM ELEMENTS ---
-const mainGrid = document.getElementById('main-grid');
-const emptyState = document.getElementById('empty-state');
-const searchOverlay = document.getElementById('search-overlay');
-const searchInput = document.getElementById('search-input');
-const searchResults = document.getElementById('search-results');
-const toast = document.getElementById('toast');
-const loader = document.getElementById('loader');
-const introOverlay = document.getElementById('intro-overlay');
-const appContainer = document.getElementById('app-container');
+let mainGrid, emptyState, searchOverlay, searchInput, searchResults, toast, loader, introOverlay, appContainer;
 
 // --- STARTUP LOGIC ---
-window.onload = async () => {
+window.addEventListener('DOMContentLoaded', async () => {
+    mainGrid = document.getElementById('main-grid');
+    emptyState = document.getElementById('empty-state');
+    searchOverlay = document.getElementById('search-overlay');
+    searchInput = document.getElementById('search-input');
+    searchResults = document.getElementById('search-results');
+    toast = document.getElementById('toast');
+    
+    if(toast) {
+        toast.onclick = () => {
+            clearTimeout(toastTimer);
+            toast.style.transform = "translateX(120%)"; // HIDE
+        };
+    }
+
+    loader = document.getElementById('loader');
+    introOverlay = document.getElementById('intro-overlay');
+    appContainer = document.getElementById('app-container');
+
+    document.getElementById('enter-trigger').onclick = window.triggerEntry;
+    document.getElementById('return-btn').onclick = window.triggerReturn;
+    document.getElementById('header-search-btn').onclick = () => { 
+        if(isSharedMode) return showToast("LOCKED: READ ONLY"); 
+        searchOverlay.style.display = 'flex'; searchInput.focus(); 
+    };
+    document.getElementById('close-search').onclick = () => { searchOverlay.style.display = 'none'; };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') searchOverlay.style.display = 'none'; });
+    searchInput.oninput = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(performSearch, 500); };
+    
     const params = new URLSearchParams(location.search);
     const viewId = params.get("view");
     
     if (viewId) {
-        // === SHARED MODE: FAST PATH ===
-        document.querySelector('.loader-text').innerText = "DOWNLOADING SHARED LIST...";
+        document.querySelector('.loader-text').innerText = "SYNCING...";
         await initSharedMode(viewId);
     } else {
-        // === NORMAL MODE ===
         introOverlay.style.display = 'block';
         loadLocalData();
         buildRing(); 
     }
-};
+
+    setTimeout(() => {
+        if(loader.style.display !== 'none') {
+            gsap.to(loader, { opacity: 0, duration: 0.5, onComplete: () => loader.style.display = 'none' });
+            gsap.to(introOverlay, { opacity: 1, duration: 0.5 });
+            if(!ringActive) { appContainer.style.display = 'block'; gsap.to(appContainer, { opacity: 1 }); }
+        }
+    }, 4000);
+});
 
 async function initSharedMode(viewId) {
     isSharedMode = true;
-    document.getElementById('btn-import').style.display = 'flex';
-    document.getElementById('btn-share').innerHTML = `<span>COPY LINK</span> <span>©</span>`;
+    const impBtn = document.getElementById('btn-import');
+    const shareBtn = document.getElementById('btn-share');
+    if(impBtn) impBtn.style.display = 'flex';
+    if(shareBtn) shareBtn.innerHTML = `<span>COPY LINK</span> <span>©</span>`;
     
     if(!window.db) { setTimeout(()=>initSharedMode(viewId), 100); return; }
 
@@ -335,13 +386,10 @@ async function initSharedMode(viewId) {
             appContainer.style.display = 'block';
             gsap.to(appContainer, { opacity: 1, duration: 0.5 });
         } else {
-            alert("LINK EXPIRED");
-            window.location.href = window.location.pathname; 
+            alert("LINK EXPIRED"); window.location.href = window.location.pathname; 
         }
     } catch(err) {
-        console.error(err);
-        alert("CONNECTION ERROR");
-        window.location.href = window.location.pathname;
+        console.error(err); window.location.href = window.location.pathname;
     }
 }
 
@@ -349,21 +397,16 @@ function loadLocalData() {
     try { savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e) { savedMovies = []; }
 }
 
-// --- RING & PRELOADER (Normal Mode Only) ---
-function preloadImages(urls, callback) {
-    let loaded = 0;
-    const total = urls.length;
-    const progressBar = document.getElementById('progress-bar');
-    if(total === 0) { callback(); return; }
-    urls.forEach(url => {
-        const img = new Image();
-        img.onload = img.onerror = () => {
-            loaded++;
-            progressBar.style.width = (loaded / total) * 100 + "%";
-            if(loaded === total) callback();
-        };
-        img.src = url;
-    });
+// --- OPTIMIZED IMAGE LOADER ---
+function getOptimizedUrl(path, type = 'grid') {
+    if(!path) return PLACEHOLDER;
+    if(path.startsWith('http')) return path;
+    
+    // SEARCH: w185 (close to w200) + 50% Quality. Fast but decent.
+    if(type === 'search') return `${PROXY_BASE}w185${path}&output=webp&q=50`;
+    
+    // GRID: w500 (Good Quality) + 80% Quality
+    return `${PROXY_BASE}w500${path}&output=webp&q=80`;
 }
 
 function buildRing() {
@@ -372,97 +415,82 @@ function buildRing() {
     ringWrap.innerHTML = "";
     
     let postersToDisplay = [];
-    
     if (savedMovies.length > 0) {
         const reversed = [...savedMovies].reverse();
         const slice = reversed.slice(0, 12);
         postersToDisplay = slice.map(m => {
-            return m.Poster && m.Poster !== "N/A" ? m.Poster : "https://via.placeholder.com/300x450/000000/FFFFFF?text=NO+IMG";
+            if(m.Poster && m.Poster.startsWith('/')) return getOptimizedUrl(m.Poster, 'grid');
+            return m.Poster || PLACEHOLDER;
         });
     } else {
-        const fallbacks = ["DUNE", "MATRIX", "BLADE RUNNER", "TRON", "AKIRA", "INTERSTELLAR", "ALIEN", "INCEPTION", "ARRIVAL", "EX MACHINA", "TENET", "ROBOCOP"];
+        const fallbacks = ["DUNE", "MATRIX", "BLADE RUNNER", "AKIRA", "INTERSTELLAR", "INCEPTION", "ARRIVAL", "TENET"];
         postersToDisplay = fallbacks.map(title => `https://via.placeholder.com/300x450/000000/FFFFFF?text=${encodeURIComponent(title)}`);
     }
 
-    preloadImages(postersToDisplay, () => {
+    let loaded = 0;
+    const total = postersToDisplay.length;
+    if(total === 0) finishLoading();
+
+    postersToDisplay.forEach(url => {
+        const img = new Image();
+        img.onload = img.onerror = () => {
+            loaded++;
+            const bar = document.getElementById('progress-bar');
+            if(bar) bar.style.width = (loaded / total) * 100 + "%";
+            if(loaded === total) finishLoading();
+        };
+        img.src = url;
+    });
+
+    function finishLoading() {
         gsap.to(loader, { opacity: 0, duration: 0.3, onComplete: () => loader.style.display = 'none' });
         gsap.to(introOverlay, { opacity: 1, duration: 0.5 });
+        initRingAnimation(postersToDisplay);
+    }
 
-        const radius = 280; 
-        let rotation = 0;
-        const speed = 0.0005;
-
-        const elements = postersToDisplay.map((url, index) => {
+    function initRingAnimation(urls) {
+        const radius = 280; let rotation = 0; const speed = 0.0005;
+        const elements = urls.map((url, index) => {
             const el = document.createElement('div');
             el.className = 'ring-item';
             el.style.backgroundImage = `url(${url})`;
-            
             el.onmouseenter = () => {
                 ringWrap.classList.add('dimmed');
-                const rect = el.getBoundingClientRect();
-                
                 inspector.style.backgroundImage = `url(${url})`;
                 inspector.style.display = 'block';
-                
-                if(url.includes("SX300")) {
-                    let hiRes = url.replace("SX300", "SX1000"); 
-                    let img = new Image(); img.src = hiRes;
-                    img.onload = () => {
-                        if(inspector.style.display === 'block') inspector.style.backgroundImage = `url(${hiRes})`;
-                    };
-                }
-                
+                const rect = el.getBoundingClientRect();
                 const centerX = window.innerWidth / 2;
                 const centerY = window.innerHeight / 2;
-                const itemX = rect.left + rect.width/2;
-                const itemY = rect.top + rect.height/2;
-                
-                gsap.set(inspector, { x: itemX - centerX, y: itemY - centerY, scale: 1, opacity: 1 });
-                gsap.to(inspector, { x: 350, y: 0, scale: 2.5, duration: 0.4, ease: "power2.out", force3D: true });
+                gsap.set(inspector, { x: (rect.left + rect.width/2) - centerX, y: (rect.top + rect.height/2) - centerY, scale: 1, opacity: 1 });
+                gsap.to(inspector, { x: 350, y: 0, scale: 2.5, duration: 0.4, ease: "power2.out" });
             };
-            
             ringWrap.appendChild(el);
             return el;
         });
-
         inspector.onmouseleave = () => {
-            gsap.to(inspector, {
-                x: 100, scale: 0.8, opacity: 0, duration: 0.3, ease: "power2.in", force3D: true,
-                onComplete: () => {
-                    inspector.style.display = 'none';
-                    ringWrap.classList.remove('dimmed');
-                }
-            });
+            gsap.to(inspector, { x: 100, scale: 0.8, opacity: 0, duration: 0.3, onComplete: () => {
+                inspector.style.display = 'none'; ringWrap.classList.remove('dimmed');
+            }});
         };
-        
         function loop() {
             if(!ringActive) return;
             rotation += speed;
             elements.forEach((el, index) => {
-                const offset = (index / elements.length) * Math.PI * 2;
-                const angle = rotation + offset;
+                const angle = rotation + ((index / elements.length) * Math.PI * 2);
                 el.style.transform = `translate3d(${Math.cos(angle) * radius}px, ${Math.sin(angle) * radius}px, 0)`;
             });
             requestAnimationFrame(loop);
         }
-        ringActive = true;
-        loop();
-    });
+        ringActive = true; loop();
+    }
 }
 
 window.triggerEntry = () => {
-    ringActive = false;
-    render(); 
-    
+    ringActive = false; render(); 
     gsap.to('#ring-wrap', { scale: 3, opacity: 0, duration: 0.6, ease: "power2.in" });
     gsap.to('#inspector', { scale: 3, opacity: 0, duration: 0.6 }); 
     gsap.to('.center-title', { scale: 0.5, opacity: 0, duration: 0.4 });
-    
-    gsap.to(introOverlay, {
-        opacity: 0, delay: 0.4, duration: 0.8,
-        onComplete: () => { introOverlay.style.display = 'none'; }
-    });
-
+    gsap.to(introOverlay, { opacity: 0, delay: 0.4, duration: 0.8, onComplete: () => { introOverlay.style.display = 'none'; } });
     appContainer.style.display = 'block';
     gsap.to(appContainer, { opacity: 1, delay: 0.4, duration: 0.8 });
     document.body.style.overflow = 'auto';
@@ -470,25 +498,15 @@ window.triggerEntry = () => {
 
 window.triggerReturn = () => {
     if(isSharedMode) { window.location.href = window.location.pathname; return; }
-
     gsap.to(appContainer, { opacity: 0, duration: 0.4, onComplete: () => {
-        appContainer.style.display = 'none';
-        document.body.style.overflow = 'hidden';
-        
+        appContainer.style.display = 'none'; document.body.style.overflow = 'hidden';
         buildRing(); 
-        introOverlay.style.display = 'block';
-        gsap.to(introOverlay, { opacity: 1, duration: 0.4 });
-        
+        introOverlay.style.display = 'block'; gsap.to(introOverlay, { opacity: 1, duration: 0.4 });
         gsap.to('#ring-wrap', { scale: 1, opacity: 1, duration: 0.4 });
         gsap.to('.center-title', { scale: 1, opacity: 1, duration: 0.4 });
     }});
 };
 
-document.getElementById('enter-trigger').onclick = window.triggerEntry;
-document.getElementById('return-btn').onclick = window.triggerReturn;
-
-
-// --- APP LOGIC ---
 function render() {
     mainGrid.innerHTML = "";
     if (savedMovies.length === 0) { emptyState.style.display = 'flex'; return; }
@@ -496,54 +514,68 @@ function render() {
     
     savedMovies.forEach((movie, index) => {
         const card = document.createElement('div'); card.className = 'card';
-        let imgUrl = movie.Poster && movie.Poster !== "N/A" ? movie.Poster : PLACEHOLDER;
-        if(imgUrl.includes("SX300")) imgUrl = imgUrl.replace("SX300", "SX700");
+        let imgUrl = movie.Poster;
+        if(movie.Poster && movie.Poster.startsWith('/')) {
+            imgUrl = getOptimizedUrl(movie.Poster, 'grid');
+        }
         
-        card.innerHTML = `<img class="card-img" src="${imgUrl}" loading="lazy"><div class="card-overlay"><div class="card-title">${movie.Title}</div><div class="card-year">${movie.Year}</div></div>`;
-        
+        card.innerHTML = `<img class="card-img" src="${imgUrl}" loading="lazy" decoding="async"><div class="card-overlay"><div class="card-title">${movie.Title}</div><div class="card-year">${movie.Year}</div></div>`;
         if(!isSharedMode) { 
-            card.oncontextmenu = (e) => { 
-                e.preventDefault(); 
-                if(confirm(`DELETE "${movie.Title}"?`)) removeMovie(movie.imdbID); 
-            }; 
+            card.oncontextmenu = (e) => { e.preventDefault(); if(confirm(`DELETE "${movie.Title}"?`)) removeMovie(movie.imdbID); }; 
         }
         mainGrid.appendChild(card);
         gsap.from(card, { y: 30, opacity: 0, duration: 0.6, delay: index * 0.05 });
     });
 }
 
-document.getElementById('header-search-btn').onclick = () => { 
-    if(isSharedMode) return showToast("LOCKED: READ ONLY"); 
-    searchOverlay.style.display = 'flex'; searchInput.focus(); 
-};
-document.getElementById('close-search').onclick = () => { searchOverlay.style.display = 'none'; };
-document.addEventListener('keydown', (e) => { 
-    if (e.key === 'Escape') searchOverlay.style.display = 'none'; 
-});
-let debounceTimer; searchInput.oninput = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(performSearch, 500); };
-
+let debounceTimer; 
 async function performSearch() {
     const query = searchInput.value.trim();
     if (query.length < 1) { searchResults.innerHTML = ""; return; }
     searchResults.innerHTML = `<div style="color:#666; font-family:'Syncopate'">SCANNING...</div>`;
+    
     try {
-        let url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(query)}`;
-        let res = await fetch(url); let data = await res.json();
-        if (data.Response === "False") {
-            const exactUrl = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&t=${encodeURIComponent(query)}`;
-            const res2 = await fetch(exactUrl); const data2 = await res2.json();
-            if (data2.Response === "True") data = { Response: "True", Search: [data2] };
-        }
+        let url = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=false`;
+        let res = await fetch(url);
+        let data = await res.json();
+        
         searchResults.innerHTML = "";
-        if (data.Response === "True" && data.Search) {
-            data.Search.forEach(m => {
+        
+        if (data.results && data.results.length > 0) {
+            data.results.forEach(m => {
+                if(!m.poster_path) return;
                 const el = document.createElement('div'); el.className = 'card'; el.style.border = "1px solid #333";
-                let imgUrl = m.Poster !== "N/A" ? m.Poster : PLACEHOLDER;
-                el.innerHTML = `<img class="card-img" src="${imgUrl}" style="filter:none;"><div class="card-overlay" style="transform:translateY(0)"><div class="card-title">ADD TO ARCHIVE +</div></div>`;
-                el.onclick = () => addToLibrary(m); searchResults.appendChild(el);
+                
+                // === SMART LOAD: Low Res first, High Res on Hover ===
+                let lowResUrl = `${PROXY_BASE}w185${m.poster_path}&output=webp&q=50`; // Initial fuzzy load (Fast)
+                let highResUrl = `${PROXY_BASE}w342${m.poster_path}&output=webp&q=80`; // Hover load (Sharp)
+                
+                let year = m.release_date ? m.release_date.split('-')[0] : "N/A";
+                
+                el.innerHTML = `<img class="card-img" src="${lowResUrl}" loading="lazy" decoding="async" style="filter:none;"><div class="card-overlay"><div class="card-title">${m.title}</div><div class="card-year">${year}</div></div>`;
+                
+                // Hover Event: Upgrade Image quality
+                el.onmouseenter = function() {
+                    const img = this.querySelector('img');
+                    if(img.src !== highResUrl) img.src = highResUrl;
+                };
+
+                const movieObj = {
+                    Title: m.title,
+                    Year: year,
+                    Poster: m.poster_path, 
+                    imdbID: m.id.toString()
+                };
+                el.onclick = () => addToLibrary(movieObj); 
+                searchResults.appendChild(el);
             });
-        } else { searchResults.innerHTML = `<div style="color:#666">NO DATA FOUND</div>`; }
-    } catch(err) { searchResults.innerHTML = `<div style="color:red">CONNECTION ERROR</div>`; }
+        } else { 
+            searchResults.innerHTML = `<div style="color:#666">NO DATA FOUND</div>`; 
+        }
+    } catch(err) { 
+        console.error(err);
+        searchResults.innerHTML = `<div style="color:red">CONNECTION ERROR</div>`; 
+    }
 }
 
 function addToLibrary(movie) { 
@@ -561,29 +593,45 @@ function removeMovie(id) {
 }
 
 const btnShare = document.getElementById('btn-share');
-btnShare.onclick = async () => {
-    if(isSharedMode) { copyToClipboard(window.location.href); return; }
-    if(savedMovies.length === 0) return showToast("EMPTY DATABASE");
-    const originalText = btnShare.innerHTML; btnShare.innerHTML = `<span>GENERATING...</span>`;
-    try {
-        if(!window.db) throw new Error("DB NOT READY");
-        const shareId = Math.random().toString(36).substring(2, 9);
-        await window.db.collection("shares").doc(shareId).set({ movies: savedMovies, createdAt: Date.now() });
-        const link = `${window.location.origin}${window.location.pathname}?view=${shareId}`;
-        copyToClipboard(link);
-    } catch(err) { console.error(err); showToast("ERROR"); } finally { setTimeout(() => btnShare.innerHTML = originalText, 2000); }
-};
+if(btnShare) {
+    btnShare.onclick = async () => {
+        if(isSharedMode) { copyToClipboard(window.location.href); return; }
+        if(savedMovies.length === 0) return showToast("EMPTY DATABASE");
+        const originalText = btnShare.innerHTML; btnShare.innerHTML = `<span>GENERATING...</span>`;
+        try {
+            if(!window.db) throw new Error("DB NOT READY");
+            const shareId = Math.random().toString(36).substring(2, 9);
+            await window.db.collection("shares").doc(shareId).set({ movies: savedMovies, createdAt: Date.now() });
+            const link = `${window.location.origin}${window.location.pathname}?view=${shareId}`;
+            copyToClipboard(link);
+        } catch(err) { console.error(err); showToast("ERROR"); } finally { setTimeout(() => btnShare.innerHTML = originalText, 2000); }
+    };
+}
 
-document.getElementById('btn-import').onclick = () => {
-    if(confirm("MERGE INTO YOUR ARCHIVE?")) {
-        let current = []; try { current = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){}
-        const merged = [...current, ...savedMovies].filter((obj, index, self) => index === self.findIndex((t) => t.imdbID === obj.imdbID));
-        localStorage.setItem("savedMovies", JSON.stringify(merged)); 
-        window.location.href = window.location.pathname; 
-    }
-};
+const btnImport = document.getElementById('btn-import');
+if(btnImport) {
+    btnImport.onclick = () => {
+        if(confirm("MERGE INTO YOUR ARCHIVE?")) {
+            let current = []; try { current = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){}
+            const merged = [...current, ...savedMovies].filter((obj, index, self) => index === self.findIndex((t) => t.imdbID === obj.imdbID));
+            localStorage.setItem("savedMovies", JSON.stringify(merged)); 
+            window.location.href = window.location.pathname; 
+        }
+    };
+}
 
-function showToast(msg) { toast.innerText = msg; toast.style.right = "30px"; setTimeout(() => { toast.style.right = "-300px"; }, 3000); }
+// --- FINAL FIX: USE TRANSFORM TO HIDE COMPLETELY ---
+function showToast(msg) { 
+    clearTimeout(toastTimer); // Prevent stacking
+    toast.innerText = msg; 
+    toast.style.transform = "translateX(0)"; // SHOW
+    
+    // Wait 1.5s then slide out
+    toastTimer = setTimeout(() => { 
+        toast.style.transform = "translateX(120%)"; // HIDE COMPLETELY
+    }, 1500); 
+}
+
 function copyToClipboard(text) { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(() => showToast("LINK COPIED")); } else { prompt("COPY LINK:", text); } }
 </script>
 </body>
