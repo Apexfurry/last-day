@@ -4,9 +4,10 @@
 <meta charset="UTF-8">
 <title>LAST DAY</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="preconnect" href="https://wsrv.nl">
-<link rel="dns-prefetch" href="https://wsrv.nl">
-<link rel="preconnect" href="https://image.tmdb.org">
+<link rel="preconnect" href="https://image.tmdb.org" crossorigin>
+<link rel="preconnect" href="https://wsrv.nl" crossorigin>
+<link rel="preconnect" href="https://api.allorigins.win" crossorigin>
+<link rel="preconnect" href="https://corsproxy.io" crossorigin>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Syncopate:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -14,859 +15,390 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
 <style>
-/* --- CORE VARIABLES --- */
-:root {
-    --bg: #050505;
-    --primary: #00ff41;
-    --accent: #ff0055;
-    --text: #ffffff;
-}
-
+:root { --bg: #050505; --primary: #00ff41; --accent: #ff0055; --text: #ffffff; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    overflow: hidden; 
-    height: 100vh;
-}
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-/* =========================
-   FAST LOADER
-   ========================= */
-#loader {
-    position: fixed; inset: 0; z-index: 10000;
-    background: #000;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    transition: opacity 0.3s;
-}
-.loader-text {
-    font-family: 'Syncopate', sans-serif; color: var(--primary);
-    font-size: 1rem; letter-spacing: 3px; margin-bottom: 20px;
-    text-transform: uppercase;
-}
-.loader-bar {
-    width: 150px; height: 1px; background: #333; position: relative; overflow: hidden;
-}
-.loader-progress {
-    position: absolute; top: 0; left: 0; height: 100%; width: 0%;
-    background: var(--primary); transition: width 0.1s linear;
-}
+/* LOADING SCREEN */
+#loader { position: fixed; inset: 0; z-index: 10000; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
+.loader-text { font-family: 'Syncopate', sans-serif; color: var(--primary); font-size: 1rem; letter-spacing: 3px; margin-bottom: 20px; }
+.loader-bar { width: 150px; height: 1px; background: #333; position: relative; overflow: hidden; }
+.loader-progress { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--primary); transition: width 0.1s linear; }
 
-/* =========================
-   PAGE 1: INTRO
-   ========================= */
-#intro-overlay {
-    display: none; 
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    z-index: 9999; 
-    background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 70%);
-    overflow: hidden;
-    perspective: 1000px;
-}
-#intro-overlay::after {
-    content: ""; position: absolute; inset: 0;
-    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 60px 60px; pointer-events: none;
-}
-.center-title {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 50;
-    font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 0.9rem;
-    letter-spacing: 4px; color: #fff; cursor: pointer; text-transform: uppercase;
-    transition: all 0.3s; pointer-events: auto;
-    text-shadow: 0 0 20px rgba(255,255,255,0.2);
-    padding: 40px; 
-}
-.center-title:hover {
-    color: var(--primary); text-shadow: 0 0 40px var(--primary); letter-spacing: 6px;
-}
-#ring-wrap { position: absolute; top: 50%; left: 50%; width: 0; height: 0; z-index: 100; }
-.ring-item {
-    position: absolute; top: -90px; left: -60px;
-    width: 120px; height: 180px;
-    background-size: cover; background-position: center;
-    border: 1px solid rgba(255,255,255,0.15);
-    cursor: default;
-    will-change: transform; transform: translateZ(0); 
-    transition: opacity 0.2s, filter 0.2s;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-#ring-wrap.dimmed .ring-item { opacity: 0.15; filter: grayscale(100%) blur(1px); pointer-events: none; }
-#inspector {
-    position: absolute; top: 50%; left: 50%;
-    width: 120px; height: 180px; 
-    background-size: cover; background-position: center;
-    image-rendering: -webkit-optimize-contrast;
-    z-index: 1000; display: none; pointer-events: auto; cursor: default;
-    border: 1px solid #fff; box-shadow: 0 30px 80px rgba(0,0,0,0.9);
-}
+/* INTRO */
+#intro-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 70%); }
+.center-title { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 0.9rem; letter-spacing: 4px; color: #fff; cursor: pointer; padding: 40px; transition: 0.3s; }
+.center-title:hover { color: var(--primary); text-shadow: 0 0 20px var(--primary); }
+#ring-wrap { position: absolute; top: 50%; left: 50%; }
+.ring-item { position: absolute; top: -90px; left: -60px; width: 120px; height: 180px; background-size: cover; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.2s; will-change: transform; }
+#ring-wrap.dimmed .ring-item { opacity: 0.15; filter: grayscale(100%); }
+#inspector { position: absolute; top: 50%; left: 50%; width: 120px; height: 180px; background-size: cover; z-index: 1000; display: none; border: 1px solid #fff; box-shadow: 0 30px 80px rgba(0,0,0,0.9); pointer-events: none; }
 
-/* =========================
-   PAGE 2: MAIN APP
-   ========================= */
-#app-container {
-    display: none; opacity: 0; height: 100vh; overflow-y: auto;
-    position: relative; z-index: 50;
-    background: #080808;
-}
-.bg-grid {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 40px 40px; pointer-events: none; z-index: -1;
-}
-header {
-    position: fixed; top: 0; left: 0; right: 0; height: 80px;
-    background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255,255,255,0.1); 
-    display: flex; align-items: center; justify-content: space-between; 
-    padding: 0 40px; z-index: 100;
-}
-#return-btn {
-    font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 0.9rem; color: #888; 
-    cursor: pointer; text-transform: uppercase; transition: color 0.3s, transform 0.3s; 
-    display: flex; align-items: center; gap: 10px;
-}
-#return-btn::before { content: '←'; font-family: 'Inter'; font-size: 1.2rem; }
+/* MAIN APP */
+#app-container { display: none; opacity: 0; height: 100vh; overflow-y: auto; background: #080808; }
+.bg-grid { position: fixed; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: -1; }
+
+header { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: rgba(0, 0, 0, 0.95); border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; z-index: 100; }
+#return-btn { font-family: 'Syncopate', sans-serif; font-weight: 700; color: #888; cursor: pointer; transition: 0.3s; }
 #return-btn:hover { color: #fff; transform: translateX(-5px); }
 
-/* --- HEADER RIGHT: ACTIONS + SEARCH --- */
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 15px; 
-}
+.header-right { display: flex; align-items: center; gap: 15px; }
+.action-btn { background: transparent; border: none; cursor: pointer; color: #fff; transform: scale(0.8); opacity: 0; pointer-events: none; transition: 0.3s; }
+.action-btn.visible { opacity: 1; pointer-events: auto; transform: scale(1); }
+#btn-fav { color: var(--accent); } #btn-del { color: #fff; }
+#header-search-btn { background: transparent; border: none; cursor: pointer; color: #fff; padding: 10px; transition: 0.2s; }
+#header-search-btn:hover { color: var(--primary); transform: scale(1.1); }
+#header-search-btn svg, .action-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
-/* SEARCH ICON BUTTON */
-#header-search-btn {
-    background: transparent; 
-    border: none; 
-    padding: 10px;
-    cursor: pointer; 
-    color: #fff;
-    display: flex; align-items: center; justify-content: center;
-    transition: transform 0.2s, color 0.2s;
-}
-#header-search-btn svg { width: 28px; height: 28px; fill: currentColor; }
-#header-search-btn:hover { transform: scale(1.1); color: var(--primary); }
+#main-grid { margin-top: 100px; padding: 0 40px 100px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
 
-/* SELECTION ACTION BUTTONS */
-.action-btn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; 
-    pointer-events: none; 
-    transform: scale(0.8);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.action-btn svg { width: 24px; height: 24px; }
-
-/* Visible State */
-.action-btn.visible {
-    opacity: 1;
-    pointer-events: auto;
-    transform: scale(1);
-}
-
-#btn-fav { color: var(--accent); } 
-#btn-fav:hover { transform: scale(1.2); filter: drop-shadow(0 0 8px var(--accent)); }
-
-#btn-del { color: #fff; } 
-#btn-del:hover { color: #ccc; transform: scale(1.2); }
-
-
-#main-grid { margin-top: 100px; padding: 0 40px 40px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
-
-/* CARD STYLES */
-.card { 
-    position: relative; aspect-ratio: 2/3; background: #1a1a1a; 
-    cursor: pointer; transition: transform 0.2s, border-color 0.2s; 
-    overflow: hidden; border: 1px solid #333; 
-    user-select: none; 
-}
+/* CARDS */
+.card { position: relative; aspect-ratio: 2/3; background: #1a1a1a; border: 1px solid #333; cursor: pointer; overflow: hidden; transition: transform 0.2s; user-select: none; }
 .card-img { 
-    width: 100%; height: 100%; object-fit: cover; 
-    filter: grayscale(0%); 
-    transition: transform 0.4s;
-    background: #111; 
+    width: 100%; height: 100%; object-fit: cover; background: #111; 
+    transition: transform 0.4s; 
+    /* Force Hardware Acceleration for smoothness */
+    will-change: transform; 
 }
-/* SELECTED STATE */
-.card.selected {
-    border: 3px solid #fff; 
-    transform: scale(0.95);
-    z-index: 20;
-    box-shadow: 0 0 20px rgba(255,255,255,0.2);
-}
-
-/* --- UPDATED FAVORITE MARKER (Bottom Right) --- */
-.fav-marker {
-    position: absolute;
-    bottom: 8px; /* Fixed: Bottom */
-    right: 8px;  /* Fixed: Right */
-    color: var(--accent);
-    font-size: 16px; /* Very small */
-    z-index: 25; /* On top of everything */
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,1)); /* Contrast shadow */
-    pointer-events: none;
-}
-
-.card:hover { 
-    transform: translateY(-8px); z-index: 10; 
-    border-color: var(--primary); 
-    box-shadow: 0 10px 30px rgba(0, 255, 65, 0.1);
-}
-.card.selected:hover {
-    transform: scale(0.95) translateY(-4px);
-    border-color: #fff;
-}
-
-.card:hover .card-img { transform: scale(1.05); } 
-.card-overlay { 
-    position: absolute; bottom: 0; left: 0; right: 0; 
-    background: rgba(0,0,0,0.9); padding: 15px; 
-    transform: translateY(100%); transition: transform 0.2s; 
-    border-top: 1px solid var(--primary);
-}
+.card.selected { border: 3px solid #fff; transform: scale(0.95); z-index: 20; }
+.fav-marker { position: absolute; bottom: 8px; right: 8px; color: var(--accent); font-size: 12px; z-index: 25; filter: drop-shadow(0 1px 3px rgba(0,0,0,1)); pointer-events: none; }
+.card:hover { transform: translateY(-8px); border-color: var(--primary); z-index: 10; box-shadow: 0 10px 30px rgba(0,255,65,0.1); }
+.card.selected:hover { transform: scale(0.95) translateY(-4px); border-color: #fff; }
+.card-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.9); padding: 15px; transform: translateY(100%); transition: 0.2s; border-top: 1px solid var(--primary); }
 .card:hover .card-overlay { transform: translateY(0); }
 .card-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.8rem; color: #fff; }
 .card-year { font-family: 'Syncopate'; font-size: 0.7rem; color: var(--primary); margin-top: 4px; }
 
-.controls { position: fixed; bottom: 40px; right: 40px; display: flex; flex-direction: column; gap: 12px; z-index: 200; }
-.btn { background: #000; color: var(--text); border: 1px solid #333; padding: 14px 24px; font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-transform: uppercase; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 160px; }
-.btn:hover { background: #fff; color: #000; }
-
-/* SCROLL TO TOP BUTTON */
-#btn-top {
-    position: fixed; 
-    bottom: 40px; 
-    left: 40px; 
-    width: 30px; 
-    height: 30px; 
-    background: transparent; 
-    border: 1px solid #333; 
-    color: #555; 
-    font-size: 1rem; 
-    cursor: pointer; 
-    z-index: 400;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.3s;
-}
-#btn-top:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-    transform: translateY(-3px);
-}
-
-/* =========================
-   SEARCH OVERLAY
-   ========================= */
-#search-overlay { 
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-    background: rgba(5,5,5,0.98); 
-    z-index: 300; 
-    display: none; flex-direction: column; 
-    padding: 0; 
-    align-items: center; 
-}
-
-.search-header-fixed {
-    width: 100%;
-    padding: 20px 40px; 
-    background: rgba(5,5,5,0.98);
-    border-bottom: 1px solid #333;
-    display: flex; align-items: center;
-    justify-content: space-between; 
-    position: sticky; top: 0; z-index: 20;
-}
-
-.search-bar-wrap { 
-    flex-grow: 0; 
-    width: 250px; 
-    border-bottom: 2px solid #333; 
-    display: flex; align-items: center; 
-}
-
-#search-input { 
-    width: 100%; background: transparent; border: none; 
-    color: #fff; font-family: 'Syncopate', sans-serif; 
-    font-weight: 700; 
-    font-size: 1.5rem; 
-    outline: none; text-transform: uppercase; 
-    padding: 5px 0;
-    caret-color: transparent; 
-}
+/* SEARCH OVERLAY */
+#search-overlay { position: fixed; inset: 0; background: rgba(5,5,5,0.98); z-index: 300; display: none; flex-direction: column; align-items: center; }
+.search-header-fixed { width: 100%; padding: 20px 40px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+.search-bar-wrap { width: 250px; border-bottom: 2px solid #333; }
+#search-input { width: 100%; background: transparent; border: none; color: #fff; font-family: 'Syncopate'; font-weight: 700; font-size: 1.5rem; outline: none; padding: 5px 0; caret-color: transparent; }
 #search-input:not(:placeholder-shown) { caret-color: #fff; }
 #search-input::placeholder { color: #333; font-size: 1rem; }
-
-#close-search { 
-    font-size: 1.5rem; 
-    cursor: pointer; color: #555; transition: color 0.3s; 
-}
+#close-search { font-size: 1.5rem; color: #555; cursor: pointer; }
 #close-search:hover { color: #fff; }
+#search-scroll-area { flex-grow: 1; width: 100%; overflow-y: auto; padding: 40px; }
+#search-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; padding-bottom: 100px; }
 
-#search-scroll-area {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 40px; 
-    width: 100%;
-}
+#empty-state { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0.3; pointer-events: none; }
+#empty-state h1 { font-family: 'Syncopate'; font-size: 4rem; }
 
-#search-results { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-    gap: 30px; 
-    padding-bottom: 100px; 
-    width: 100%;
-}
-
-#empty-state { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; opacity: 0.3; }
-#empty-state h1 { font-family: 'Syncopate'; font-size: 4rem; letter-spacing: 10px; }
-
-/* --- TOAST --- */
-#toast { 
-    position: fixed; 
-    top: 100px; 
-    right: 30px; 
-    background: var(--primary); 
-    color: #000; 
-    padding: 15px 30px; 
-    font-family: 'Syncopate'; 
-    font-weight: 700; 
-    font-size: 0.8rem; 
-    z-index: 500; 
-    cursor: pointer;
-    transform: translateX(120%); 
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-    will-change: transform;
-}
+.controls { position: fixed; bottom: 30px; right: 10px; display: flex; flex-direction: column; gap: 12px; z-index: 200; }
+.btn { background: #000; color: #fff; border: 1px solid #333; padding: 14px 24px; font-family: 'Inter'; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; min-width: 160px; transition: 0.2s; }
+.btn:hover { background: #fff; color: #000; }
+#btn-top { position: fixed; bottom: 15px; left: 10px; width: 20px; height: 20px; border: 1px solid #333; background: transparent; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 400; transition: 0.3s; }
+#btn-top:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-3px); }
+#toast { position: fixed; top: 100px; right: 30px; background: var(--primary); color: #000; padding: 15px 30px; font-family: 'Syncopate'; font-weight: 700; z-index: 500; transform: translateX(120%); transition: 0.3s; }
 </style>
 </head>
 <body>
 
-<div id="loader">
-    <div class="loader-text">holy fuck</div>
-    <div class="loader-bar"><div class="loader-progress" id="progress-bar"></div></div>
-</div>
-
-<div id="intro-overlay">
-    <div class="center-title" id="enter-trigger">LAST DAY</div>
-    <div id="ring-wrap"></div>
-    <div id="inspector"></div>
-</div>
+<div id="loader"><div class="loader-text">ACCESSING ARCHIVE</div><div class="loader-bar"><div class="loader-progress" id="progress-bar"></div></div></div>
+<div id="intro-overlay"><div class="center-title" id="enter-trigger">LAST DAY</div><div id="ring-wrap"></div><div id="inspector"></div></div>
 
 <div id="app-container">
     <div class="bg-grid"></div>
     <header>
         <div id="return-btn">RETURN</div>
-        
         <div class="header-right">
-            <button class="action-btn" id="btn-fav" title="Favorite Selected">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            </button>
-            
-            <button class="action-btn" id="btn-del" title="Delete Selected">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            </button>
-
-            <button id="header-search-btn" title="Search [S]">
-                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            </button>
+            <button class="action-btn" id="btn-fav"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+            <button class="action-btn" id="btn-del"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+            <button id="header-search-btn"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
         </div>
     </header>
-    
     <div id="main-grid"></div>
     <div id="empty-state"><h1>NULL</h1><p>NO RECORDS FOUND</p></div>
-    
-    <div class="controls">
-        <button class="btn" id="btn-share"><span>Share</span> <span>☍</span></button>
-        <button class="btn" id="btn-import" style="display:none; border-color: var(--accent); color: var(--accent);"><span>Import</span> <span>⇩</span></button>
-    </div>
-    
-    <button id="btn-top" title="Scroll to Top">↑</button>
-    
+    <div class="controls"><button class="btn" id="btn-share"><span>Share</span> <span>☍</span></button><button class="btn" id="btn-import" style="display:none; border-color: var(--accent); color: var(--accent);"><span>Import</span> <span>⇩</span></button></div>
+    <button id="btn-top">↑</button>
     <div id="search-overlay">
-        <div class="search-header-fixed">
-            <div class="search-bar-wrap">
-                <input type="text" id="search-input" placeholder="SEARCH" autocomplete="off">
-            </div>
-            <div id="close-search">✕</div>
-        </div>
-        <div id="search-scroll-area">
-            <div id="search-results"></div>
-        </div>
+        <div class="search-header-fixed"><div class="search-bar-wrap"><input type="text" id="search-input" placeholder="SEARCH" autocomplete="off"></div><div id="close-search">✕</div></div>
+        <div id="search-scroll-area"><div id="search-results"></div></div>
     </div>
-    
     <div id="toast">SUCCESS</div>
 </div>
 
 <script>
-// --- GLOBAL STATE ---
-let ringActive = true;
-let savedMovies = [];
-let isSharedMode = false;
-let toastTimer = null; 
-let selectedIDs = new Set();
-
 // --- CONFIGURATION ---
 const TMDB_KEY = "c968ffe14a9765f4d45f36e4d87b27b2";
 const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
 const PROXY_BASE = "https://wsrv.nl/?url=https://image.tmdb.org/t/p/"; 
 
-// --- FIREBASE INIT ---
-const firebaseConfig = {
-    apiKey: "AIzaSyCt6s0fVkb7DtQeq9H05wg_D0Lw_S10-0",
-    authDomain: "lastday-18.firebaseapp.com",
-    projectId: "lastday-18",
-    storageBucket: "lastday-18.firebasestorage.app",
-    messagingSenderId: "413600100426",
-    appId: "1:413600100426:web:c55e5c7fd46028a26236b3"
-};
-try { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } catch (e) { console.warn("Firebase offline"); }
+let savedMovies = [], selectedIDs = new Set(), isSharedMode = false, toastTimer, abortController;
 
-// --- DOM ELEMENTS ---
-let mainGrid, emptyState, searchOverlay, searchInput, searchResults, toast, loader, introOverlay, appContainer, btnTop;
-let btnFav, btnDel; 
+const firebaseConfig = { apiKey: "AIzaSyCt6s0fVkb7DtQeq9H05wg_D0Lw_S10-0", authDomain: "lastday-18.firebaseapp.com", projectId: "lastday-18", storageBucket: "lastday-18.firebasestorage.app", messagingSenderId: "413600100426", appId: "1:413600100426:web:c55e5c7fd46028a26236b3" };
+try { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } catch(e) {}
 
-// --- STARTUP LOGIC ---
-window.addEventListener('DOMContentLoaded', async () => {
-    mainGrid = document.getElementById('main-grid');
-    emptyState = document.getElementById('empty-state');
-    searchOverlay = document.getElementById('search-overlay');
-    searchInput = document.getElementById('search-input');
-    searchResults = document.getElementById('search-results');
-    toast = document.getElementById('toast');
-    btnTop = document.getElementById('btn-top');
-    btnFav = document.getElementById('btn-fav');
-    btnDel = document.getElementById('btn-del');
+window.addEventListener('DOMContentLoaded', () => {
+    const ids = ['main-grid', 'empty-state', 'search-overlay', 'search-input', 'search-results', 'toast', 'btn-top', 'btn-fav', 'btn-del', 'loader', 'intro-overlay', 'app-container'];
+    const el = {}; ids.forEach(id => el[id] = document.getElementById(id));
+    if(el.toast) el.toast.onclick = () => { clearTimeout(toastTimer); el.toast.style.transform = "translateX(120%)"; };
+    document.getElementById('enter-trigger').onclick = enterSite;
+    document.getElementById('return-btn').onclick = returnSite;
+    document.getElementById('header-search-btn').onclick = () => { if(isSharedMode) return showToast("LOCKED: READ ONLY"); el['search-overlay'].style.display = 'flex'; el['search-input'].focus(); };
+    document.getElementById('close-search').onclick = () => el['search-overlay'].style.display = 'none';
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') el['search-overlay'].style.display = 'none'; });
     
-    if(toast) {
-        toast.onclick = () => {
-            clearTimeout(toastTimer);
-            toast.style.transform = "translateX(120%)"; // HIDE
-        };
-    }
-
-    loader = document.getElementById('loader');
-    introOverlay = document.getElementById('intro-overlay');
-    appContainer = document.getElementById('app-container');
-
-    document.getElementById('enter-trigger').onclick = window.triggerEntry;
-    document.getElementById('return-btn').onclick = window.triggerReturn;
-    document.getElementById('header-search-btn').onclick = () => { 
-        if(isSharedMode) return showToast("LOCKED: READ ONLY"); 
-        searchOverlay.style.display = 'flex'; searchInput.focus(); 
+    let debounce;
+    el['search-input'].oninput = () => { 
+        clearTimeout(debounce); 
+        debounce = setTimeout(performSearch, 300); 
     };
-    document.getElementById('close-search').onclick = () => { searchOverlay.style.display = 'none'; };
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') searchOverlay.style.display = 'none'; });
-    searchInput.oninput = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(performSearch, 500); };
-    
-    // Scroll To Top
-    if(btnTop && appContainer) {
-        btnTop.onclick = () => {
-            appContainer.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-    }
 
-    // --- ACTION BUTTON LOGIC ---
-    if(btnFav) {
-        btnFav.onclick = () => {
-            if(selectedIDs.size === 0) return;
-            // Toggle favorite status
-            savedMovies = savedMovies.map(m => {
-                if(selectedIDs.has(m.imdbID)) {
-                    m.isFavorite = !m.isFavorite; // Toggle
-                }
-                return m;
-            });
-            localStorage.setItem("savedMovies", JSON.stringify(savedMovies));
-            showToast("UPDATED FAVORITES");
-            selectedIDs.clear(); 
-            updateSelectionUI();
-            render();
-        };
-    }
-
-    if(btnDel) {
-        btnDel.onclick = () => {
-            if(selectedIDs.size === 0) return;
-            if(confirm(`DELETE ${selectedIDs.size} ITEMS?`)) {
-                savedMovies = savedMovies.filter(m => !selectedIDs.has(m.imdbID));
-                localStorage.setItem("savedMovies", JSON.stringify(savedMovies));
-                showToast("DELETED SELECTED");
-                selectedIDs.clear();
-                updateSelectionUI();
-                render();
-            }
-        };
-    }
+    if(el['btn-top']) el['btn-top'].onclick = () => el['app-container'].scrollTo({ top:0, behavior:'smooth'});
+    if(el['btn-fav']) el['btn-fav'].onclick = toggleFavs;
+    if(el['btn-del']) el['btn-del'].onclick = deleteSelected;
 
     const params = new URLSearchParams(location.search);
-    const viewId = params.get("view");
-    
-    if (viewId) {
-        document.querySelector('.loader-text').innerText = "SYNCING...";
-        await initSharedMode(viewId);
-    } else {
-        introOverlay.style.display = 'block';
-        loadLocalData();
-        buildRing(); 
-    }
-
-    setTimeout(() => {
-        if(loader.style.display !== 'none') {
-            gsap.to(loader, { opacity: 0, duration: 0.5, onComplete: () => loader.style.display = 'none' });
-            gsap.to(introOverlay, { opacity: 1, duration: 0.5 });
-            if(!ringActive) { appContainer.style.display = 'block'; gsap.to(appContainer, { opacity: 1 }); }
-        }
-    }, 4000);
+    if(params.get("view")) { initSharedMode(params.get("view")); }
+    else { el['intro-overlay'].style.display = 'block'; loadLocal(); buildRing(); }
+    setTimeout(() => { if(el.loader.style.display!=='none') enterSite(); }, 3500);
 });
 
-async function initSharedMode(viewId) {
-    isSharedMode = true;
-    const impBtn = document.getElementById('btn-import');
-    const shareBtn = document.getElementById('btn-share');
-    if(impBtn) impBtn.style.display = 'flex';
-    if(shareBtn) shareBtn.innerHTML = `<span>COPY LINK</span> <span>©</span>`;
+function loadLocal() { try { savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){ savedMovies=[]; } }
+
+// --- IMAGE OPTIMIZER ---
+function getImg(path, type) { 
+    if(!path) return PLACEHOLDER; 
+    if(path.startsWith('http')) return path; 
+    // SEARCH: Low Quality (q=40) but fast
+    if(type==='search') return `${PROXY_BASE}w154${path}&output=webp&q=40`; 
+    // GRID: Good Quality
+    return `${PROXY_BASE}w500${path}&output=webp&q=80`; 
+}
+
+// --- PARALLEL NETWORK REQUEST ---
+async function fetchSafe(endpoint, signal) {
+    const target = `https://api.themoviedb.org/3${endpoint}`;
+    const enc = encodeURIComponent(target);
+    const t = Date.now();
     
-    if(!window.db) { setTimeout(()=>initSharedMode(viewId), 100); return; }
+    // SIMULTANEOUS REQUESTS
+    const reqs = [
+        fetch(`${target}${target.includes('?')?'&':'?'}t=${t}`, { signal }), // Direct
+        fetch(`https://api.allorigins.win/raw?url=${enc}&t=${t}`, { signal }), // Proxy 1
+        fetch(`https://corsproxy.io/?${enc}&t=${t}`, { signal }), // Proxy 2
+        fetch(`https://api.codetabs.com/v1/proxy?quest=${enc}&t=${t}`, { signal }) // Proxy 3
+    ];
+
+    // Return FIRST successful JSON response
+    return new Promise((resolve, reject) => {
+        let failures = 0;
+        reqs.forEach(req => {
+            req.then(res => {
+                if(res.ok) return res.json();
+                throw new Error("Not OK");
+            }).then(resolve).catch(() => {
+                failures++;
+                if(failures === reqs.length) reject(new Error("ALL PROXIES FAILED"));
+            });
+        });
+    });
+}
+
+async function performSearch() {
+    const input = document.getElementById('search-input');
+    const container = document.getElementById('search-results');
+    const query = input.value.trim();
+    
+    if(query.length < 1) { container.innerHTML = ""; return; }
+    
+    // VISIBLE LOADING STATE
+    container.innerHTML = `<div style="color:#00ff41; font-family:'Syncopate'; font-size:1rem; text-align:center; margin-top:50px;">SCANNING...</div>`;
+
+    if(abortController) abortController.abort();
+    abortController = new AbortController();
 
     try {
-        const doc = await window.db.collection("shares").doc(viewId).get();
-        if (doc.exists) {
-            savedMovies = doc.data().movies;
-            render();
-            gsap.to(loader, { opacity: 0, duration: 0.3, onComplete: () => loader.style.display = 'none' });
-            appContainer.style.display = 'block';
-            gsap.to(appContainer, { opacity: 1, duration: 0.5 });
-        } else {
-            alert("LINK EXPIRED"); window.location.href = window.location.pathname; 
+        let endpoint = /^tt\d+$/.test(query) 
+            ? `/find/${query}?api_key=${TMDB_KEY}&external_source=imdb_id`
+            : `/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=true`;
+
+        let data = await fetchSafe(endpoint, abortController.signal);
+        
+        // Prevent race condition overwrite
+        if (abortController.signal.aborted) return;
+
+        container.innerHTML = "";
+        let results = data.movie_results || data.tv_results || data.results || [];
+        
+        if(results.length === 0) { 
+            container.innerHTML = `<div style="color:#555; text-align:center; margin-top:50px;">NO DATA</div>`; 
+            return;
         }
+
+        results.forEach(m => {
+            if(m.media_type === 'person' || !m.poster_path) return;
+            const el = document.createElement('div'); el.className = 'card';
+            
+            let imgUrl = getImg(m.poster_path, 'search');
+            let hdUrl = getImg(m.poster_path, 'grid');
+            let title = m.title || m.name;
+            let date = m.release_date || m.first_air_date;
+            let year = date ? date.split('-')[0] : "N/A";
+            let displayId = `y-${m.id}`;
+
+            if(m.media_type === 'tv' && year !== "N/A") {
+                fetchTVStatus(m.id, displayId, year);
+                year = `${year}-`;
+            }
+
+            // CRITICAL SPEED FIX: fetchpriority="high" and loading="eager"
+            el.innerHTML = `<img class="card-img" src="${imgUrl}" loading="eager" fetchpriority="high" decoding="async"><div class="card-overlay"><div class="card-title">${title}</div><div class="card-year" id="${displayId}">${year}</div></div>`;
+            
+            el.onmouseenter = () => { el.querySelector('img').src = hdUrl; };
+            el.onclick = () => addToLibrary({ Title: title, Year: document.getElementById(displayId).innerText, Poster: m.poster_path, imdbID: m.id.toString(), isFavorite: false });
+            container.appendChild(el);
+        });
+
     } catch(err) {
-        console.error(err); window.location.href = window.location.pathname;
+        if(abortController && abortController.signal.aborted) return;
+        container.innerHTML = `<div style="color:#ff0055; text-align:center; margin-top:50px;">CONNECTION ERROR</div>`;
     }
 }
 
-function loadLocalData() {
-    try { savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e) { savedMovies = []; }
+async function fetchTVStatus(id, elementId, start) {
+    try {
+        let data = await fetchSafe(`/tv/${id}?api_key=${TMDB_KEY}`);
+        const el = document.getElementById(elementId);
+        if(el && (data.status === "Ended" || data.status === "Canceled")) {
+            let end = data.last_air_date ? data.last_air_date.split('-')[0] : "";
+            el.innerText = (end && end !== start) ? `${start}-${end}` : start;
+        }
+    } catch(e){}
 }
 
-function getOptimizedUrl(path, type = 'grid') {
-    if(!path) return PLACEHOLDER;
-    if(path.startsWith('http')) return path;
-    if(type === 'search') return `${PROXY_BASE}w154${path}&output=webp&q=50`;
-    return `${PROXY_BASE}w500${path}&output=webp&q=80`;
+function render() {
+    const grid = document.getElementById('main-grid'); grid.innerHTML = "";
+    if(savedMovies.length===0) { document.getElementById('empty-state').style.display='flex'; return; }
+    document.getElementById('empty-state').style.display='none';
+    
+    savedMovies.forEach((m, i) => {
+        const card = document.createElement('div'); card.className = `card ${selectedIDs.has(m.imdbID)?'selected':''}`;
+        let fav = m.isFavorite ? `<div class="fav-marker">♥</div>` : '';
+        // MAIN GRID IS LAZY LOADED FOR SCROLL PERFORMANCE
+        card.innerHTML = `${fav}<img class="card-img" src="${getImg(m.Poster,'grid')}" loading="lazy"><div class="card-overlay"><div class="card-title">${m.Title}</div><div class="card-year">${m.Year}</div></div>`;
+        if(!isSharedMode) card.ondblclick = (e) => { e.preventDefault(); toggleSel(m.imdbID, card); };
+        grid.appendChild(card);
+        gsap.from(card, { y:30, opacity:0, duration:0.6, delay: i*0.05 });
+    });
+    updateUI();
+}
+
+function addToLibrary(m) {
+    if(savedMovies.find(x => x.imdbID === m.imdbID)) return showToast("ALREADY SAVED");
+    savedMovies.push(m); localStorage.setItem("savedMovies", JSON.stringify(savedMovies));
+    showToast("SAVED"); render();
+}
+
+function toggleSel(id, el) {
+    if(selectedIDs.has(id)) { selectedIDs.delete(id); el.classList.remove('selected'); }
+    else { selectedIDs.add(id); el.classList.add('selected'); }
+    updateUI();
+}
+
+function toggleFavs() {
+    if(selectedIDs.size===0) return;
+    savedMovies = savedMovies.map(m => { if(selectedIDs.has(m.imdbID)) m.isFavorite = !m.isFavorite; return m; });
+    save(); selectedIDs.clear(); updateUI(); render(); showToast("UPDATED");
+}
+
+function deleteSelected() {
+    if(selectedIDs.size===0) return;
+    if(confirm("DELETE SELECTED?")) {
+        savedMovies = savedMovies.filter(m => !selectedIDs.has(m.imdbID));
+        save(); selectedIDs.clear(); updateUI(); render(); showToast("DELETED");
+    }
+}
+
+function updateUI() {
+    const vis = selectedIDs.size > 0;
+    const f = document.getElementById('btn-fav'), d = document.getElementById('btn-del');
+    if(f) f.classList.toggle('visible', vis);
+    if(d) d.classList.toggle('visible', vis);
+}
+
+function enterSite() { 
+    ringActive = false; 
+    gsap.to('#ring-wrap, #inspector', { scale:3, opacity:0, duration:0.6 });
+    gsap.to('.center-title', { scale:0.5, opacity:0, duration:0.4 });
+    gsap.to('#intro-overlay', { opacity:0, delay:0.4, onComplete:()=>document.getElementById('intro-overlay').style.display='none' });
+    document.getElementById('app-container').style.display='block';
+    gsap.to('#app-container', { opacity:1, delay:0.4, duration:0.8 });
+    document.body.style.overflow='auto';
+    render();
+}
+
+function returnSite() {
+    if(isSharedMode) { window.location.href = location.pathname; return; }
+    gsap.to('#app-container', { opacity:0, duration:0.4, onComplete:() => {
+        document.getElementById('app-container').style.display='none';
+        document.body.style.overflow='hidden'; buildRing();
+        const intro = document.getElementById('intro-overlay'); intro.style.display='block';
+        gsap.to(intro, { opacity:1, duration:0.4 });
+        gsap.to('#ring-wrap', { scale:1, opacity:1 });
+        gsap.to('.center-title', { scale:1, opacity:1 });
+    }});
 }
 
 function buildRing() {
-    const ringWrap = document.getElementById('ring-wrap');
-    const inspector = document.getElementById('inspector');
-    ringWrap.innerHTML = "";
-    
-    let postersToDisplay = [];
-    if (savedMovies.length > 0) {
-        const reversed = [...savedMovies].reverse();
-        const slice = reversed.slice(0, 12);
-        postersToDisplay = slice.map(m => {
-            if(m.Poster && m.Poster.startsWith('/')) return getOptimizedUrl(m.Poster, 'grid');
-            return m.Poster || PLACEHOLDER;
-        });
-    } else {
-        const fallbacks = ["DUNE", "MATRIX", "BLADE RUNNER", "AKIRA", "INTERSTELLAR", "INCEPTION", "ARRIVAL", "TENET"];
-        postersToDisplay = fallbacks.map(title => `https://via.placeholder.com/300x450/000000/FFFFFF?text=${encodeURIComponent(title)}`);
-    }
-
-    let loaded = 0;
-    const total = postersToDisplay.length;
-    if(total === 0) finishLoading();
-
-    postersToDisplay.forEach(url => {
-        const img = new Image();
-        img.onload = img.onerror = () => {
-            loaded++;
-            const bar = document.getElementById('progress-bar');
-            if(bar) bar.style.width = (loaded / total) * 100 + "%";
-            if(loaded === total) finishLoading();
+    const wrap = document.getElementById('ring-wrap'); wrap.innerHTML = "";
+    const list = savedMovies.length ? savedMovies.slice().reverse().slice(0,12) : Array(8).fill({Poster:PLACEHOLDER});
+    const els = list.map((m, i) => {
+        const el = document.createElement('div'); el.className = 'ring-item';
+        el.style.backgroundImage = `url(${m.Poster && m.Poster.startsWith('/') ? getImg(m.Poster,'grid') : m.Poster})`;
+        wrap.appendChild(el);
+        const ins = document.getElementById('inspector');
+        el.onmouseenter = () => { 
+            wrap.classList.add('dimmed'); ins.style.display='block'; ins.style.backgroundImage = el.style.backgroundImage;
+            const rect = el.getBoundingClientRect();
+            gsap.set(ins, { x: rect.left+rect.width/2 - window.innerWidth/2, y: rect.top+rect.height/2 - window.innerHeight/2, scale:1 });
+            gsap.to(ins, { x: 350, y: 0, scale:2.5, duration:0.4 });
         };
-        img.src = url;
+        return el;
     });
-
-    function finishLoading() {
-        gsap.to(loader, { opacity: 0, duration: 0.3, onComplete: () => loader.style.display = 'none' });
-        gsap.to(introOverlay, { opacity: 1, duration: 0.5 });
-        initRingAnimation(postersToDisplay);
-    }
-
-    function initRingAnimation(urls) {
-        const radius = 280; let rotation = 0; const speed = 0.0005;
-        const elements = urls.map((url, index) => {
-            const el = document.createElement('div');
-            el.className = 'ring-item';
-            el.style.backgroundImage = `url(${url})`;
-            el.onmouseenter = () => {
-                ringWrap.classList.add('dimmed');
-                inspector.style.backgroundImage = `url(${url})`;
-                inspector.style.display = 'block';
-                const rect = el.getBoundingClientRect();
-                const centerX = window.innerWidth / 2;
-                const centerY = window.innerHeight / 2;
-                gsap.set(inspector, { x: (rect.left + rect.width/2) - centerX, y: (rect.top + rect.height/2) - centerY, scale: 1, opacity: 1 });
-                gsap.to(inspector, { x: 350, y: 0, scale: 2.5, duration: 0.4, ease: "power2.out" });
-            };
-            ringWrap.appendChild(el);
-            return el;
+    document.getElementById('inspector').onmouseleave = () => { 
+        gsap.to('#inspector', { x:100, scale:0.8, opacity:0, duration:0.3, onComplete:()=>{ 
+            document.getElementById('inspector').style.display='none'; document.getElementById('inspector').style.opacity=1; wrap.classList.remove('dimmed'); 
+        }}); 
+    };
+    let rot = 0;
+    function loop() {
+        if(!ringActive) return; rot += 0.0005;
+        els.forEach((el, i) => {
+            const a = rot + (i/els.length)*Math.PI*2;
+            el.style.transform = `translate3d(${Math.cos(a)*280}px, ${Math.sin(a)*280}px, 0)`;
         });
-        inspector.onmouseleave = () => {
-            gsap.to(inspector, { x: 100, scale: 0.8, opacity: 0, duration: 0.3, onComplete: () => {
-                inspector.style.display = 'none'; ringWrap.classList.remove('dimmed');
-            }});
-        };
-        function loop() {
-            if(!ringActive) return;
-            rotation += speed;
-            elements.forEach((el, index) => {
-                const angle = rotation + ((index / elements.length) * Math.PI * 2);
-                el.style.transform = `translate3d(${Math.cos(angle) * radius}px, ${Math.sin(angle) * radius}px, 0)`;
-            });
-            requestAnimationFrame(loop);
-        }
-        ringActive = true; loop();
+        requestAnimationFrame(loop);
     }
+    ringActive = true; loop();
+    gsap.to('#loader', { opacity:0, onComplete:()=>document.getElementById('loader').style.display='none' });
 }
 
-window.triggerEntry = () => {
-    ringActive = false; render(); 
-    gsap.to('#ring-wrap', { scale: 3, opacity: 0, duration: 0.6, ease: "power2.in" });
-    gsap.to('#inspector', { scale: 3, opacity: 0, duration: 0.6 }); 
-    gsap.to('.center-title', { scale: 0.5, opacity: 0, duration: 0.4 });
-    gsap.to(introOverlay, { opacity: 0, delay: 0.4, duration: 0.8, onComplete: () => { introOverlay.style.display = 'none'; } });
-    appContainer.style.display = 'block';
-    gsap.to(appContainer, { opacity: 1, delay: 0.4, duration: 0.8 });
-    document.body.style.overflow = 'auto';
+function save() { localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); }
+function showToast(msg) { clearTimeout(toastTimer); const t = document.getElementById('toast'); t.innerText=msg; t.style.transform="translateX(0)"; toastTimer=setTimeout(()=>t.style.transform="translateX(120%)", 1500); }
+
+async function initSharedMode(id) {
+    isSharedMode=true; document.getElementById('btn-import').style.display='flex';
+    try { const d = await window.db.collection("shares").doc(id).get(); 
+        if(d.exists) { savedMovies=d.data().movies; enterSite(); } else alert("EXPIRED"); 
+    } catch(e) { console.log(e); }
+}
+const shareBtn = document.getElementById('btn-share');
+if(shareBtn) shareBtn.onclick = async () => {
+    if(isSharedMode) return; if(!savedMovies.length) return showToast("EMPTY");
+    shareBtn.innerHTML = "GENERATING...";
+    try { const id = Math.random().toString(36).substr(2,9); await window.db.collection("shares").doc(id).set({movies:savedMovies});
+    prompt("COPY LINK:", location.origin+location.pathname+"?view="+id); } catch(e){ showToast("ERROR"); }
+    setTimeout(()=>shareBtn.innerHTML=`<span>Share</span> <span>☍</span>`, 2000);
 };
-
-window.triggerReturn = () => {
-    if(isSharedMode) { window.location.href = window.location.pathname; return; }
-    gsap.to(appContainer, { opacity: 0, duration: 0.4, onComplete: () => {
-        appContainer.style.display = 'none'; document.body.style.overflow = 'hidden';
-        buildRing(); 
-        introOverlay.style.display = 'block'; gsap.to(introOverlay, { opacity: 1, duration: 0.4 });
-        gsap.to('#ring-wrap', { scale: 1, opacity: 1, duration: 0.4 });
-        gsap.to('.center-title', { scale: 1, opacity: 1, duration: 0.4 });
-    }});
+document.getElementById('btn-import').onclick = () => {
+    if(confirm("IMPORT?")) { 
+        const old = JSON.parse(localStorage.getItem("savedMovies")||"[]");
+        const merged = [...old, ...savedMovies].filter((v,i,a)=>a.findIndex(t=>(t.imdbID===v.imdbID))===i);
+        localStorage.setItem("savedMovies", JSON.stringify(merged)); window.location.href = location.pathname;
+    }
 };
-
-function render() {
-    mainGrid.innerHTML = "";
-    if (savedMovies.length === 0) { emptyState.style.display = 'flex'; return; }
-    emptyState.style.display = 'none';
-    
-    savedMovies.forEach((movie, index) => {
-        const card = document.createElement('div'); card.className = 'card';
-        let imgUrl = movie.Poster;
-        if(movie.Poster && movie.Poster.startsWith('/')) {
-            imgUrl = getOptimizedUrl(movie.Poster, 'grid');
-        }
-        
-        let favHTML = '';
-        if(movie.isFavorite) {
-            favHTML = `<div class="fav-marker">♥</div>`;
-        }
-        if(selectedIDs.has(movie.imdbID)) {
-            card.classList.add('selected');
-        }
-
-        card.innerHTML = `${favHTML}<img class="card-img" src="${imgUrl}" loading="lazy" decoding="async"><div class="card-overlay"><div class="card-title">${movie.Title}</div><div class="card-year">${movie.Year}</div></div>`;
-        
-        if(!isSharedMode) {
-            card.ondblclick = (e) => {
-                e.preventDefault();
-                toggleSelection(movie.imdbID, card);
-            };
-        }
-        
-        mainGrid.appendChild(card);
-        gsap.from(card, { y: 30, opacity: 0, duration: 0.6, delay: index * 0.05 });
-    });
-    
-    updateSelectionUI();
-}
-
-function toggleSelection(id, cardElement) {
-    if(selectedIDs.has(id)) {
-        selectedIDs.delete(id);
-        cardElement.classList.remove('selected');
-    } else {
-        selectedIDs.add(id);
-        cardElement.classList.add('selected');
-    }
-    updateSelectionUI();
-}
-
-function updateSelectionUI() {
-    if(selectedIDs.size > 0) {
-        if(btnFav) btnFav.classList.add('visible');
-        if(btnDel) btnDel.classList.add('visible');
-    } else {
-        if(btnFav) btnFav.classList.remove('visible');
-        if(btnDel) btnDel.classList.remove('visible');
-    }
-}
-
-let debounceTimer; 
-async function performSearch() {
-    const query = searchInput.value.trim();
-    if (query.length < 1) { searchResults.innerHTML = ""; return; }
-    searchResults.innerHTML = `<div style="color:#666; font-family:'Syncopate'">SCANNING...</div>`;
-    
-    try {
-        let url;
-        const isImdbId = /^tt\d+$/.test(query);
-
-        if (isImdbId) {
-            url = `https://api.themoviedb.org/3/find/${query}?api_key=${TMDB_KEY}&external_source=imdb_id`;
-        } else {
-            url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=true`;
-        }
-
-        let res = await fetch(url);
-        let data = await res.json();
-        
-        searchResults.innerHTML = "";
-        
-        let results = isImdbId ? [...(data.movie_results || []), ...(data.tv_results || [])] : data.results;
-
-        if (results && results.length > 0) {
-            results.forEach(m => {
-                if(m.media_type === 'person') return;
-                if(!m.poster_path) return;
-
-                const el = document.createElement('div'); el.className = 'card'; el.style.border = "1px solid #333";
-                
-                let lowResUrl = `${PROXY_BASE}w154${m.poster_path}&output=webp&q=50`; 
-                let highResUrl = `${PROXY_BASE}w342${m.poster_path}&output=webp&q=80`;
-                
-                let title = m.title || m.name; 
-                let date = m.release_date || m.first_air_date;
-                let startYear = date ? date.split('-')[0] : "N/A";
-                
-                let yearDisplayId = `year-${m.id}`;
-                let yearText = startYear;
-
-                if(m.media_type === 'tv' && startYear !== "N/A") {
-                    yearText = `${startYear}-`; 
-                    fetchTVStatus(m.id, yearDisplayId, startYear);
-                }
-
-                el.innerHTML = `<img class="card-img" src="${lowResUrl}" loading="lazy" decoding="async" style="filter:none;"><div class="card-overlay"><div class="card-title">${title}</div><div class="card-year" id="${yearDisplayId}">${yearText}</div></div>`;
-                
-                el.onmouseenter = function() {
-                    const img = this.querySelector('img');
-                    if(img.src !== highResUrl) img.src = highResUrl;
-                };
-
-                const movieObj = {
-                    Title: title,
-                    Year: yearText, 
-                    Poster: m.poster_path, 
-                    imdbID: m.id.toString(),
-                    isFavorite: false 
-                };
-                
-                el.onclick = function() {
-                    const currentYearText = document.getElementById(yearDisplayId).innerText;
-                    movieObj.Year = currentYearText;
-                    addToLibrary(movieObj);
-                }; 
-                
-                searchResults.appendChild(el);
-            });
-        } else { 
-            searchResults.innerHTML = `<div style="color:#666">NO DATA FOUND</div>`; 
-        }
-    } catch(err) { 
-        console.error(err);
-        searchResults.innerHTML = `<div style="color:red">CONNECTION ERROR</div>`; 
-    }
-}
-
-async function fetchTVStatus(id, elementId, startYear) {
-    try {
-        let res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${TMDB_KEY}`);
-        let data = await res.json();
-        const el = document.getElementById(elementId);
-        if(el) {
-            if(data.status === "Ended" || data.status === "Canceled") {
-                let endYear = data.last_air_date ? data.last_air_date.split('-')[0] : "";
-                if(endYear && endYear !== startYear) {
-                    el.innerText = `${startYear}-${endYear}`;
-                } else {
-                    el.innerText = startYear;
-                }
-            } else {
-                el.innerText = `${startYear}-`;
-            }
-        }
-    } catch(e) { }
-}
-
-function addToLibrary(movie) { 
-    if (savedMovies.find(m => m.imdbID === movie.imdbID)) return showToast("ALREADY SAVED"); 
-    savedMovies.push(movie); 
-    localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); 
-    showToast(`SAVED: ${movie.Title}`); 
-    render(); 
-}
-
-function removeMovie(id) { 
-    savedMovies = savedMovies.filter(m => m.imdbID !== id); 
-    localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); 
-    render(); showToast("DELETED"); 
-}
-
-const btnShare = document.getElementById('btn-share');
-if(btnShare) {
-    btnShare.onclick = async () => {
-        if(isSharedMode) { copyToClipboard(window.location.href); return; }
-        if(savedMovies.length === 0) return showToast("EMPTY DATABASE");
-        const originalText = btnShare.innerHTML; btnShare.innerHTML = `<span>GENERATING...</span>`;
-        try {
-            if(!window.db) throw new Error("DB NOT READY");
-            const shareId = Math.random().toString(36).substring(2, 9);
-            await window.db.collection("shares").doc(shareId).set({ movies: savedMovies, createdAt: Date.now() });
-            const link = `${window.location.origin}${window.location.pathname}?view=${shareId}`;
-            copyToClipboard(link);
-        } catch(err) { console.error(err); showToast("ERROR"); } finally { setTimeout(() => btnShare.innerHTML = originalText, 2000); }
-    };
-}
-
-const btnImport = document.getElementById('btn-import');
-if(btnImport) {
-    btnImport.onclick = () => {
-        if(confirm("MERGE INTO YOUR ARCHIVE?")) {
-            let current = []; try { current = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){}
-            const merged = [...current, ...savedMovies].filter((obj, index, self) => index === self.findIndex((t) => t.imdbID === obj.imdbID));
-            localStorage.setItem("savedMovies", JSON.stringify(merged)); 
-            window.location.href = window.location.pathname; 
-        }
-    };
-}
-
-function showToast(msg) { 
-    clearTimeout(toastTimer); // Prevent stacking
-    toast.innerText = msg; 
-    toast.style.transform = "translateX(0)"; // SHOW
-    
-    // Wait 1.5s then slide out
-    toastTimer = setTimeout(() => { 
-        toast.style.transform = "translateX(120%)"; // HIDE COMPLETELY
-    }, 1500); 
-}
-
-function copyToClipboard(text) { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(() => showToast("LINK COPIED")); } else { prompt("COPY LINK:", text); } }
 </script>
 </body>
 </html>
