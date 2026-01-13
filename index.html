@@ -25,14 +25,18 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .loader-bar { width: 150px; height: 1px; background: #333; position: relative; overflow: hidden; }
 .loader-progress { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--primary); transition: width 0.1s linear; }
 
-/* INTRO */
+/* INTRO - FIXED INTERACTION */
 #intro-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 70%); }
 .center-title { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 0.9rem; letter-spacing: 4px; color: #fff; cursor: pointer; padding: 40px; transition: 0.3s; }
 .center-title:hover { color: var(--primary); text-shadow: 0 0 20px var(--primary); }
 #ring-wrap { position: absolute; top: 50%; left: 50%; }
-.ring-item { position: absolute; top: -90px; left: -60px; width: 120px; height: 180px; background-size: cover; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.2s; will-change: transform; }
-#ring-wrap.dimmed .ring-item { opacity: 0.15; filter: grayscale(100%); }
-#inspector { position: absolute; top: 50%; left: 50%; width: 120px; height: 180px; background-size: cover; z-index: 1000; display: none; border: 1px solid #fff; box-shadow: 0 30px 80px rgba(0,0,0,0.9); pointer-events: none; }
+.ring-item { position: absolute; top: -90px; left: -60px; width: 120px; height: 180px; background-size: cover; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.2s; will-change: transform; cursor: pointer; }
+
+/* FIXED: Pointer events disabled when dimmed so you don't accidentally hover others */
+#ring-wrap.dimmed .ring-item { opacity: 0.15; filter: grayscale(100%); pointer-events: none; }
+
+/* FIXED: Inspector must capture mouse events (pointer-events: auto) */
+#inspector { position: absolute; top: 50%; left: 50%; width: 120px; height: 180px; background-size: cover; z-index: 1000; display: none; border: 1px solid #fff; box-shadow: 0 30px 80px rgba(0,0,0,0.9); pointer-events: auto; cursor: default; }
 
 /* MAIN APP */
 #app-container { display: none; opacity: 0; height: 100vh; overflow-y: auto; background: #080808; }
@@ -54,12 +58,7 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: r
 
 /* CARDS */
 .card { position: relative; aspect-ratio: 2/3; background: #1a1a1a; border: 1px solid #333; cursor: pointer; overflow: hidden; transition: transform 0.2s; user-select: none; }
-.card-img { 
-    width: 100%; height: 100%; object-fit: cover; background: #111; 
-    transition: transform 0.4s; 
-    /* Force Hardware Acceleration for smoothness */
-    will-change: transform; 
-}
+.card-img { width: 100%; height: 100%; object-fit: cover; background: #111; transition: transform 0.4s; will-change: transform; }
 .card.selected { border: 3px solid #fff; transform: scale(0.95); z-index: 20; }
 .fav-marker { position: absolute; bottom: 8px; right: 8px; color: var(--accent); font-size: 12px; z-index: 25; filter: drop-shadow(0 1px 3px rgba(0,0,0,1)); pointer-events: none; }
 .card:hover { transform: translateY(-8px); border-color: var(--primary); z-index: 10; box-shadow: 0 10px 30px rgba(0,255,65,0.1); }
@@ -69,7 +68,7 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: r
 .card-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.8rem; color: #fff; }
 .card-year { font-family: 'Syncopate'; font-size: 0.7rem; color: var(--primary); margin-top: 4px; }
 
-/* SEARCH OVERLAY */
+/* SEARCH */
 #search-overlay { position: fixed; inset: 0; background: rgba(5,5,5,0.98); z-index: 300; display: none; flex-direction: column; align-items: center; }
 .search-header-fixed { width: 100%; padding: 20px 40px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
 .search-bar-wrap { width: 250px; border-bottom: 2px solid #333; }
@@ -84,10 +83,10 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: r
 #empty-state { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0.3; pointer-events: none; }
 #empty-state h1 { font-family: 'Syncopate'; font-size: 4rem; }
 
-.controls { position: fixed; bottom: 30px; right: 10px; display: flex; flex-direction: column; gap: 12px; z-index: 200; }
+.controls { position: fixed; bottom: 40px; right: 40px; display: flex; flex-direction: column; gap: 12px; z-index: 200; }
 .btn { background: #000; color: #fff; border: 1px solid #333; padding: 14px 24px; font-family: 'Inter'; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; min-width: 160px; transition: 0.2s; }
 .btn:hover { background: #fff; color: #000; }
-#btn-top { position: fixed; bottom: 15px; left: 10px; width: 20px; height: 20px; border: 1px solid #333; background: transparent; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 400; transition: 0.3s; }
+#btn-top { position: fixed; bottom: 40px; left: 40px; width: 30px; height: 30px; border: 1px solid #333; background: transparent; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 400; transition: 0.3s; }
 #btn-top:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-3px); }
 #toast { position: fixed; top: 100px; right: 30px; background: var(--primary); color: #000; padding: 15px 30px; font-family: 'Syncopate'; font-weight: 700; z-index: 500; transform: translateX(120%); transition: 0.3s; }
 </style>
@@ -119,7 +118,6 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: r
 </div>
 
 <script>
-// --- CONFIGURATION ---
 const TMDB_KEY = "c968ffe14a9765f4d45f36e4d87b27b2";
 const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
 const PROXY_BASE = "https://wsrv.nl/?url=https://image.tmdb.org/t/p/"; 
@@ -140,11 +138,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => { if(e.key === 'Escape') el['search-overlay'].style.display = 'none'; });
     
     let debounce;
-    el['search-input'].oninput = () => { 
-        clearTimeout(debounce); 
-        debounce = setTimeout(performSearch, 300); 
-    };
-
+    el['search-input'].oninput = () => { clearTimeout(debounce); debounce = setTimeout(performSearch, 300); };
     if(el['btn-top']) el['btn-top'].onclick = () => el['app-container'].scrollTo({ top:0, behavior:'smooth'});
     if(el['btn-fav']) el['btn-fav'].onclick = toggleFavs;
     if(el['btn-del']) el['btn-del'].onclick = deleteSelected;
@@ -156,42 +150,30 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadLocal() { try { savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){ savedMovies=[]; } }
-
-// --- IMAGE OPTIMIZER ---
 function getImg(path, type) { 
     if(!path) return PLACEHOLDER; 
     if(path.startsWith('http')) return path; 
-    // SEARCH: Low Quality (q=40) but fast
     if(type==='search') return `${PROXY_BASE}w154${path}&output=webp&q=40`; 
-    // GRID: Good Quality
     return `${PROXY_BASE}w500${path}&output=webp&q=80`; 
 }
 
-// --- PARALLEL NETWORK REQUEST ---
+// --- PARALLEL NETWORK ---
 async function fetchSafe(endpoint, signal) {
     const target = `https://api.themoviedb.org/3${endpoint}`;
     const enc = encodeURIComponent(target);
     const t = Date.now();
-    
-    // SIMULTANEOUS REQUESTS
     const reqs = [
-        fetch(`${target}${target.includes('?')?'&':'?'}t=${t}`, { signal }), // Direct
-        fetch(`https://api.allorigins.win/raw?url=${enc}&t=${t}`, { signal }), // Proxy 1
-        fetch(`https://corsproxy.io/?${enc}&t=${t}`, { signal }), // Proxy 2
-        fetch(`https://api.codetabs.com/v1/proxy?quest=${enc}&t=${t}`, { signal }) // Proxy 3
+        fetch(`${target}${target.includes('?')?'&':'?'}t=${t}`, { signal }), 
+        fetch(`https://api.allorigins.win/raw?url=${enc}&t=${t}`, { signal }), 
+        fetch(`https://corsproxy.io/?${enc}&t=${t}`, { signal }), 
+        fetch(`https://api.codetabs.com/v1/proxy?quest=${enc}&t=${t}`, { signal }) 
     ];
-
-    // Return FIRST successful JSON response
     return new Promise((resolve, reject) => {
         let failures = 0;
         reqs.forEach(req => {
-            req.then(res => {
-                if(res.ok) return res.json();
-                throw new Error("Not OK");
-            }).then(resolve).catch(() => {
-                failures++;
-                if(failures === reqs.length) reject(new Error("ALL PROXIES FAILED"));
-            });
+            req.then(res => { if(res.ok) return res.json(); throw new Error("Not OK"); })
+               .then(resolve)
+               .catch(() => { failures++; if(failures === reqs.length) reject(new Error("ALL FAILED")); });
         });
     });
 }
@@ -200,57 +182,35 @@ async function performSearch() {
     const input = document.getElementById('search-input');
     const container = document.getElementById('search-results');
     const query = input.value.trim();
-    
     if(query.length < 1) { container.innerHTML = ""; return; }
     
-    // VISIBLE LOADING STATE
     container.innerHTML = `<div style="color:#00ff41; font-family:'Syncopate'; font-size:1rem; text-align:center; margin-top:50px;">SCANNING...</div>`;
-
     if(abortController) abortController.abort();
     abortController = new AbortController();
 
     try {
-        let endpoint = /^tt\d+$/.test(query) 
-            ? `/find/${query}?api_key=${TMDB_KEY}&external_source=imdb_id`
-            : `/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=true`;
-
+        let endpoint = /^tt\d+$/.test(query) ? `/find/${query}?api_key=${TMDB_KEY}&external_source=imdb_id` : `/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=true`;
         let data = await fetchSafe(endpoint, abortController.signal);
-        
-        // Prevent race condition overwrite
-        if (abortController.signal.aborted) return;
+        if(abortController.signal.aborted) return;
 
         container.innerHTML = "";
         let results = data.movie_results || data.tv_results || data.results || [];
-        
-        if(results.length === 0) { 
-            container.innerHTML = `<div style="color:#555; text-align:center; margin-top:50px;">NO DATA</div>`; 
-            return;
-        }
+        if(results.length === 0) { container.innerHTML = `<div style="color:#555; text-align:center; margin-top:50px;">NO DATA</div>`; return; }
 
         results.forEach(m => {
             if(m.media_type === 'person' || !m.poster_path) return;
             const el = document.createElement('div'); el.className = 'card';
-            
-            let imgUrl = getImg(m.poster_path, 'search');
-            let hdUrl = getImg(m.poster_path, 'grid');
             let title = m.title || m.name;
             let date = m.release_date || m.first_air_date;
             let year = date ? date.split('-')[0] : "N/A";
             let displayId = `y-${m.id}`;
+            if(m.media_type === 'tv' && year !== "N/A") { fetchTVStatus(m.id, displayId, year); year = `${year}-`; }
 
-            if(m.media_type === 'tv' && year !== "N/A") {
-                fetchTVStatus(m.id, displayId, year);
-                year = `${year}-`;
-            }
-
-            // CRITICAL SPEED FIX: fetchpriority="high" and loading="eager"
-            el.innerHTML = `<img class="card-img" src="${imgUrl}" loading="eager" fetchpriority="high" decoding="async"><div class="card-overlay"><div class="card-title">${title}</div><div class="card-year" id="${displayId}">${year}</div></div>`;
-            
-            el.onmouseenter = () => { el.querySelector('img').src = hdUrl; };
+            el.innerHTML = `<img class="card-img" src="${getImg(m.poster_path, 'search')}" loading="eager" fetchpriority="high" decoding="async"><div class="card-overlay"><div class="card-title">${title}</div><div class="card-year" id="${displayId}">${year}</div></div>`;
+            el.onmouseenter = () => { el.querySelector('img').src = getImg(m.poster_path, 'grid'); };
             el.onclick = () => addToLibrary({ Title: title, Year: document.getElementById(displayId).innerText, Poster: m.poster_path, imdbID: m.id.toString(), isFavorite: false });
             container.appendChild(el);
         });
-
     } catch(err) {
         if(abortController && abortController.signal.aborted) return;
         container.innerHTML = `<div style="color:#ff0055; text-align:center; margin-top:50px;">CONNECTION ERROR</div>`;
@@ -272,11 +232,9 @@ function render() {
     const grid = document.getElementById('main-grid'); grid.innerHTML = "";
     if(savedMovies.length===0) { document.getElementById('empty-state').style.display='flex'; return; }
     document.getElementById('empty-state').style.display='none';
-    
     savedMovies.forEach((m, i) => {
         const card = document.createElement('div'); card.className = `card ${selectedIDs.has(m.imdbID)?'selected':''}`;
         let fav = m.isFavorite ? `<div class="fav-marker">♥</div>` : '';
-        // MAIN GRID IS LAZY LOADED FOR SCROLL PERFORMANCE
         card.innerHTML = `${fav}<img class="card-img" src="${getImg(m.Poster,'grid')}" loading="lazy"><div class="card-overlay"><div class="card-title">${m.Title}</div><div class="card-year">${m.Year}</div></div>`;
         if(!isSharedMode) card.ondblclick = (e) => { e.preventDefault(); toggleSel(m.imdbID, card); };
         grid.appendChild(card);
@@ -287,36 +245,12 @@ function render() {
 
 function addToLibrary(m) {
     if(savedMovies.find(x => x.imdbID === m.imdbID)) return showToast("ALREADY SAVED");
-    savedMovies.push(m); localStorage.setItem("savedMovies", JSON.stringify(savedMovies));
-    showToast("SAVED"); render();
+    savedMovies.push(m); localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); showToast("SAVED"); render();
 }
-
-function toggleSel(id, el) {
-    if(selectedIDs.has(id)) { selectedIDs.delete(id); el.classList.remove('selected'); }
-    else { selectedIDs.add(id); el.classList.add('selected'); }
-    updateUI();
-}
-
-function toggleFavs() {
-    if(selectedIDs.size===0) return;
-    savedMovies = savedMovies.map(m => { if(selectedIDs.has(m.imdbID)) m.isFavorite = !m.isFavorite; return m; });
-    save(); selectedIDs.clear(); updateUI(); render(); showToast("UPDATED");
-}
-
-function deleteSelected() {
-    if(selectedIDs.size===0) return;
-    if(confirm("DELETE SELECTED?")) {
-        savedMovies = savedMovies.filter(m => !selectedIDs.has(m.imdbID));
-        save(); selectedIDs.clear(); updateUI(); render(); showToast("DELETED");
-    }
-}
-
-function updateUI() {
-    const vis = selectedIDs.size > 0;
-    const f = document.getElementById('btn-fav'), d = document.getElementById('btn-del');
-    if(f) f.classList.toggle('visible', vis);
-    if(d) d.classList.toggle('visible', vis);
-}
+function toggleSel(id, el) { if(selectedIDs.has(id)) { selectedIDs.delete(id); el.classList.remove('selected'); } else { selectedIDs.add(id); el.classList.add('selected'); } updateUI(); }
+function toggleFavs() { if(selectedIDs.size===0) return; savedMovies = savedMovies.map(m => { if(selectedIDs.has(m.imdbID)) m.isFavorite = !m.isFavorite; return m; }); save(); selectedIDs.clear(); updateUI(); render(); showToast("UPDATED"); }
+function deleteSelected() { if(selectedIDs.size===0) return; if(confirm("DELETE SELECTED?")) { savedMovies = savedMovies.filter(m => !selectedIDs.has(m.imdbID)); save(); selectedIDs.clear(); updateUI(); render(); showToast("DELETED"); } }
+function updateUI() { const vis = selectedIDs.size > 0; const f = document.getElementById('btn-fav'), d = document.getElementById('btn-del'); if(f) f.classList.toggle('visible', vis); if(d) d.classList.toggle('visible', vis); }
 
 function enterSite() { 
     ringActive = false; 
@@ -329,11 +263,21 @@ function enterSite() {
     render();
 }
 
+// FIX: COMPLETE CLEANUP ON RETURN
 function returnSite() {
     if(isSharedMode) { window.location.href = location.pathname; return; }
     gsap.to('#app-container', { opacity:0, duration:0.4, onComplete:() => {
         document.getElementById('app-container').style.display='none';
-        document.body.style.overflow='hidden'; buildRing();
+        document.body.style.overflow='hidden'; 
+        
+        // CRITICAL FIX: Reset intro state
+        const wrap = document.getElementById('ring-wrap');
+        const inspector = document.getElementById('inspector');
+        wrap.classList.remove('dimmed'); 
+        inspector.style.display = 'none';
+        inspector.style.opacity = 1;
+
+        buildRing();
         const intro = document.getElementById('intro-overlay'); intro.style.display='block';
         gsap.to(intro, { opacity:1, duration:0.4 });
         gsap.to('#ring-wrap', { scale:1, opacity:1 });
@@ -342,26 +286,37 @@ function returnSite() {
 }
 
 function buildRing() {
-    const wrap = document.getElementById('ring-wrap'); wrap.innerHTML = "";
+    const wrap = document.getElementById('ring-wrap'); 
+    wrap.innerHTML = "";
+    
     const list = savedMovies.length ? savedMovies.slice().reverse().slice(0,12) : Array(8).fill({Poster:PLACEHOLDER});
     const els = list.map((m, i) => {
         const el = document.createElement('div'); el.className = 'ring-item';
         el.style.backgroundImage = `url(${m.Poster && m.Poster.startsWith('/') ? getImg(m.Poster,'grid') : m.Poster})`;
         wrap.appendChild(el);
         const ins = document.getElementById('inspector');
+        
+        // FIXED HOVER LOGIC
         el.onmouseenter = () => { 
-            wrap.classList.add('dimmed'); ins.style.display='block'; ins.style.backgroundImage = el.style.backgroundImage;
+            wrap.classList.add('dimmed'); 
+            ins.style.display='block'; 
+            ins.style.backgroundImage = el.style.backgroundImage;
             const rect = el.getBoundingClientRect();
             gsap.set(ins, { x: rect.left+rect.width/2 - window.innerWidth/2, y: rect.top+rect.height/2 - window.innerHeight/2, scale:1 });
             gsap.to(ins, { x: 350, y: 0, scale:2.5, duration:0.4 });
         };
         return el;
     });
+
+    // FIXED MOUSE LEAVE LOGIC
     document.getElementById('inspector').onmouseleave = () => { 
         gsap.to('#inspector', { x:100, scale:0.8, opacity:0, duration:0.3, onComplete:()=>{ 
-            document.getElementById('inspector').style.display='none'; document.getElementById('inspector').style.opacity=1; wrap.classList.remove('dimmed'); 
+            document.getElementById('inspector').style.display='none'; 
+            document.getElementById('inspector').style.opacity=1; 
+            wrap.classList.remove('dimmed'); 
         }}); 
     };
+
     let rot = 0;
     function loop() {
         if(!ringActive) return; rot += 0.0005;
