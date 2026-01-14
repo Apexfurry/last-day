@@ -10,6 +10,15 @@
 <link rel="preconnect" href="https://corsproxy.io" crossorigin>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;800&family=Syncopate:wght@700;800&display=swap" rel="stylesheet">
+
+<script>
+    window.onerror = function(msg, url, line) {
+        console.error("Silent Error: " + msg);
+        // Only show critical UI errors if necessary, otherwise keep running
+        return true; 
+    };
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
@@ -19,33 +28,27 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-/* LOADING SCREEN */
-#loader { position: fixed; inset: 0; z-index: 10000; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
-.loader-text { font-family: 'Syncopate', sans-serif; color: var(--primary); font-size: 1rem; letter-spacing: 3px; margin-bottom: 20px; }
+#loader { position: fixed; inset: 0; z-index: 10000; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; pointer-events: none; }
+.loader-text { font-family: 'Syncopate', sans-serif; color: var(--primary); font-size: 1rem; letter-spacing: 3px; margin-bottom: 20px; animation: pulse 1s infinite alternate; }
 .loader-bar { width: 150px; height: 1px; background: #333; position: relative; overflow: hidden; }
-.loader-progress { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--primary); transition: width 0.1s linear; }
+.loader-progress { position: absolute; top: 0; left: 0; height: 100%; width: 100%; background: var(--primary); transform: translateX(-100%); animation: load 1.5s forwards; }
+@keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(0%); } }
+@keyframes pulse { 0% { opacity: 0.5; } 100% { opacity: 1; } }
 
-/* INTRO - FIXED INTERACTION */
-#intro-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 70%); }
+#intro-overlay { display: block; position: fixed; inset: 0; z-index: 9999; background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 70%); }
 .center-title { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; font-family: 'Syncopate', sans-serif; font-weight: 700; font-size: 0.9rem; letter-spacing: 4px; color: #fff; cursor: pointer; padding: 40px; transition: 0.3s; }
 .center-title:hover { color: var(--primary); text-shadow: 0 0 20px var(--primary); }
-#ring-wrap { position: absolute; top: 50%; left: 50%; }
+#ring-wrap { position: absolute; top: 50%; left: 50%; width: 0; height: 0; z-index: 100; }
 .ring-item { position: absolute; top: -90px; left: -60px; width: 120px; height: 180px; background-size: cover; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.2s; will-change: transform; cursor: pointer; }
-
-/* FIXED: Pointer events disabled when dimmed so you don't accidentally hover others */
 #ring-wrap.dimmed .ring-item { opacity: 0.15; filter: grayscale(100%); pointer-events: none; }
-
-/* FIXED: Inspector must capture mouse events (pointer-events: auto) */
 #inspector { position: absolute; top: 50%; left: 50%; width: 120px; height: 180px; background-size: cover; z-index: 1000; display: none; border: 1px solid #fff; box-shadow: 0 30px 80px rgba(0,0,0,0.9); pointer-events: auto; cursor: default; }
 
-/* MAIN APP */
 #app-container { display: none; opacity: 0; height: 100vh; overflow-y: auto; background: #080808; }
 .bg-grid { position: fixed; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: -1; }
 
 header { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: rgba(0, 0, 0, 0.95); border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; z-index: 100; }
 #return-btn { font-family: 'Syncopate', sans-serif; font-weight: 700; color: #888; cursor: pointer; transition: 0.3s; }
 #return-btn:hover { color: #fff; transform: translateX(-5px); }
-
 .header-right { display: flex; align-items: center; gap: 15px; }
 .action-btn { background: transparent; border: none; cursor: pointer; color: #fff; transform: scale(0.8); opacity: 0; pointer-events: none; transition: 0.3s; }
 .action-btn.visible { opacity: 1; pointer-events: auto; transform: scale(1); }
@@ -55,34 +58,27 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: r
 #header-search-btn svg, .action-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
 #main-grid { margin-top: 100px; padding: 0 40px 100px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
-
-/* CARDS */
 .card { position: relative; aspect-ratio: 2/3; background: #1a1a1a; border: 1px solid #333; cursor: pointer; overflow: hidden; transition: transform 0.2s; user-select: none; }
 .card-img { width: 100%; height: 100%; object-fit: cover; background: #111; transition: transform 0.4s; will-change: transform; }
 .card.selected { border: 3px solid #fff; transform: scale(0.95); z-index: 20; }
 .fav-marker { position: absolute; bottom: 8px; right: 8px; color: var(--accent); font-size: 12px; z-index: 25; filter: drop-shadow(0 1px 3px rgba(0,0,0,1)); pointer-events: none; }
 .card:hover { transform: translateY(-8px); border-color: var(--primary); z-index: 10; box-shadow: 0 10px 30px rgba(0,255,65,0.1); }
-.card.selected:hover { transform: scale(0.95) translateY(-4px); border-color: #fff; }
 .card-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.9); padding: 15px; transform: translateY(100%); transition: 0.2s; border-top: 1px solid var(--primary); }
 .card:hover .card-overlay { transform: translateY(0); }
 .card-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.8rem; color: #fff; }
 .card-year { font-family: 'Syncopate'; font-size: 0.7rem; color: var(--primary); margin-top: 4px; }
 
-/* SEARCH */
 #search-overlay { position: fixed; inset: 0; background: rgba(5,5,5,0.98); z-index: 300; display: none; flex-direction: column; align-items: center; }
 .search-header-fixed { width: 100%; padding: 20px 40px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
 .search-bar-wrap { width: 250px; border-bottom: 2px solid #333; }
 #search-input { width: 100%; background: transparent; border: none; color: #fff; font-family: 'Syncopate'; font-weight: 700; font-size: 1.5rem; outline: none; padding: 5px 0; caret-color: transparent; }
 #search-input:not(:placeholder-shown) { caret-color: #fff; }
-#search-input::placeholder { color: #333; font-size: 1rem; }
 #close-search { font-size: 1.5rem; color: #555; cursor: pointer; }
 #close-search:hover { color: #fff; }
 #search-scroll-area { flex-grow: 1; width: 100%; overflow-y: auto; padding: 40px; }
 #search-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; padding-bottom: 100px; }
-
 #empty-state { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0.3; pointer-events: none; }
 #empty-state h1 { font-family: 'Syncopate'; font-size: 4rem; }
-
 .controls { position: fixed; bottom: 40px; right: 40px; display: flex; flex-direction: column; gap: 12px; z-index: 200; }
 .btn { background: #000; color: #fff; border: 1px solid #333; padding: 14px 24px; font-family: 'Inter'; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; min-width: 160px; transition: 0.2s; }
 .btn:hover { background: #fff; color: #000; }
@@ -93,8 +89,13 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: r
 </head>
 <body>
 
-<div id="loader"><div class="loader-text">ACCESSING ARCHIVE</div><div class="loader-bar"><div class="loader-progress" id="progress-bar"></div></div></div>
-<div id="intro-overlay"><div class="center-title" id="enter-trigger">LAST DAY</div><div id="ring-wrap"></div><div id="inspector"></div></div>
+<div id="loader"><div class="loader-text">loading</div><div class="loader-bar"><div class="loader-progress"></div></div></div>
+
+<div id="intro-overlay">
+    <div class="center-title" id="enter-trigger">LAST DAY</div>
+    <div id="ring-wrap"></div>
+    <div id="inspector"></div>
+</div>
 
 <div id="app-container">
     <div class="bg-grid"></div>
@@ -120,16 +121,24 @@ header { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: r
 <script>
 const TMDB_KEY = "c968ffe14a9765f4d45f36e4d87b27b2";
 const PLACEHOLDER = "https://via.placeholder.com/300x450/111/333?text=NO+IMG";
-const PROXY_BASE = "https://wsrv.nl/?url=https://image.tmdb.org/t/p/"; 
 
-let savedMovies = [], selectedIDs = new Set(), isSharedMode = false, toastTimer, abortController;
+let savedMovies = [], selectedIDs = new Set(), isSharedMode = false, toastTimer, abortController, ringActive = true;
+let searchCounter = 0;
+const searchCache = new Map(); 
 
+// FIREBASE (Fail-Safe)
 const firebaseConfig = { apiKey: "AIzaSyCt6s0fVkb7DtQeq9H05wg_D0Lw_S10-0", authDomain: "lastday-18.firebaseapp.com", projectId: "lastday-18", storageBucket: "lastday-18.firebasestorage.app", messagingSenderId: "413600100426", appId: "1:413600100426:web:c55e5c7fd46028a26236b3" };
-try { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } catch(e) {}
+try { 
+    if(typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig); 
+        window.db = firebase.firestore(); 
+    }
+} catch(e) { console.log("Firebase Offline"); }
 
 window.addEventListener('DOMContentLoaded', () => {
     const ids = ['main-grid', 'empty-state', 'search-overlay', 'search-input', 'search-results', 'toast', 'btn-top', 'btn-fav', 'btn-del', 'loader', 'intro-overlay', 'app-container'];
     const el = {}; ids.forEach(id => el[id] = document.getElementById(id));
+    
     if(el.toast) el.toast.onclick = () => { clearTimeout(toastTimer); el.toast.style.transform = "translateX(120%)"; };
     document.getElementById('enter-trigger').onclick = enterSite;
     document.getElementById('return-btn').onclick = returnSite;
@@ -138,44 +147,52 @@ window.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => { if(e.key === 'Escape') el['search-overlay'].style.display = 'none'; });
     
     let debounce;
-    el['search-input'].oninput = () => { clearTimeout(debounce); debounce = setTimeout(performSearch, 300); };
+    el['search-input'].oninput = () => { clearTimeout(debounce); debounce = setTimeout(performSearch, 500); };
+    
     if(el['btn-top']) el['btn-top'].onclick = () => el['app-container'].scrollTo({ top:0, behavior:'smooth'});
     if(el['btn-fav']) el['btn-fav'].onclick = toggleFavs;
     if(el['btn-del']) el['btn-del'].onclick = deleteSelected;
 
     const params = new URLSearchParams(location.search);
     if(params.get("view")) { initSharedMode(params.get("view")); }
-    else { el['intro-overlay'].style.display = 'block'; loadLocal(); buildRing(); }
-    setTimeout(() => { if(el.loader.style.display!=='none') enterSite(); }, 3500);
+    else { 
+        loadLocal(); 
+        buildRing(); 
+        setTimeout(() => { if(el.loader) { el.loader.style.opacity = 0; setTimeout(()=>el.loader.style.display='none', 500); } }, 1000);
+    }
 });
 
 function loadLocal() { try { savedMovies = JSON.parse(localStorage.getItem("savedMovies")) || []; } catch(e){ savedMovies=[]; } }
 function getImg(path, type) { 
     if(!path) return PLACEHOLDER; 
     if(path.startsWith('http')) return path; 
-    if(type==='search') return `${PROXY_BASE}w154${path}&output=webp&q=40`; 
-    return `${PROXY_BASE}w500${path}&output=webp&q=80`; 
+    return `https://wsrv.nl/?url=https://image.tmdb.org/t/p/w500${path}&output=webp&q=80`;
 }
 
-// --- PARALLEL NETWORK ---
-async function fetchSafe(endpoint, signal) {
-    const target = `https://api.themoviedb.org/3${endpoint}`;
-    const enc = encodeURIComponent(target);
+// --- PARALLEL STEALTH RACE (MAX SPEED) ---
+async function fetchSafe(endpoint) {
+    const tmdbUrl = `https://api.themoviedb.org/3${endpoint}`;
+    const enc = encodeURIComponent(tmdbUrl);
     const t = Date.now();
-    const reqs = [
-        fetch(`${target}${target.includes('?')?'&':'?'}t=${t}`, { signal }), 
-        fetch(`https://api.allorigins.win/raw?url=${enc}&t=${t}`, { signal }), 
-        fetch(`https://corsproxy.io/?${enc}&t=${t}`, { signal }), 
-        fetch(`https://api.codetabs.com/v1/proxy?quest=${enc}&t=${t}`, { signal }) 
-    ];
-    return new Promise((resolve, reject) => {
-        let failures = 0;
-        reqs.forEach(req => {
-            req.then(res => { if(res.ok) return res.json(); throw new Error("Not OK"); })
-               .then(resolve)
-               .catch(() => { failures++; if(failures === reqs.length) reject(new Error("ALL FAILED")); });
-        });
-    });
+
+    // 1. ALL ORIGINS (High Trust)
+    const req1 = fetch(`https://api.allorigins.win/get?url=${enc}&t=${t}`)
+        .then(r => r.json())
+        .then(d => JSON.parse(d.contents))
+        .catch(() => Promise.reject());
+
+    // 2. CORS PROXY (High Speed)
+    const req2 = fetch(`https://corsproxy.io/?${enc}&t=${t}`)
+        .then(r => r.json())
+        .catch(() => Promise.reject());
+
+    // 3. CODE TABS (Backup)
+    const req3 = fetch(`https://api.codetabs.com/v1/proxy?quest=${enc}&t=${t}`)
+        .then(r => r.json())
+        .catch(() => Promise.reject());
+
+    // RACE THEM ALL (First one to finish WINS)
+    return Promise.any([req1, req2, req3]);
 }
 
 async function performSearch() {
@@ -184,48 +201,49 @@ async function performSearch() {
     const query = input.value.trim();
     if(query.length < 1) { container.innerHTML = ""; return; }
     
-    container.innerHTML = `<div style="color:#00ff41; font-family:'Syncopate'; font-size:1rem; text-align:center; margin-top:50px;">SCANNING...</div>`;
+    if(searchCache.has(query)) { renderSearchResults(searchCache.get(query)); return; }
+
+    const currentId = ++searchCounter;
+    container.innerHTML = `<div style="color:#00ff41; font-family:'Syncopate'; font-size:1rem; text-align:center; margin-top:50px;">SEARCHING...</div>`;
+    
     if(abortController) abortController.abort();
     abortController = new AbortController();
 
     try {
-        let endpoint = /^tt\d+$/.test(query) ? `/find/${query}?api_key=${TMDB_KEY}&external_source=imdb_id` : `/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=true`;
-        let data = await fetchSafe(endpoint, abortController.signal);
-        if(abortController.signal.aborted) return;
+        let endpoint = /^tt\d+$/.test(query) 
+            ? `/find/${query}?api_key=${TMDB_KEY}&external_source=imdb_id` 
+            : `/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=true`;
+        
+        let data = await fetchSafe(endpoint);
+        
+        if(currentId !== searchCounter) return; 
+        searchCache.set(query, data);
+        renderSearchResults(data);
 
-        container.innerHTML = "";
-        let results = data.movie_results || data.tv_results || data.results || [];
-        if(results.length === 0) { container.innerHTML = `<div style="color:#555; text-align:center; margin-top:50px;">NO DATA</div>`; return; }
-
-        results.forEach(m => {
-            if(m.media_type === 'person' || !m.poster_path) return;
-            const el = document.createElement('div'); el.className = 'card';
-            let title = m.title || m.name;
-            let date = m.release_date || m.first_air_date;
-            let year = date ? date.split('-')[0] : "N/A";
-            let displayId = `y-${m.id}`;
-            if(m.media_type === 'tv' && year !== "N/A") { fetchTVStatus(m.id, displayId, year); year = `${year}-`; }
-
-            el.innerHTML = `<img class="card-img" src="${getImg(m.poster_path, 'search')}" loading="eager" fetchpriority="high" decoding="async"><div class="card-overlay"><div class="card-title">${title}</div><div class="card-year" id="${displayId}">${year}</div></div>`;
-            el.onmouseenter = () => { el.querySelector('img').src = getImg(m.poster_path, 'grid'); };
-            el.onclick = () => addToLibrary({ Title: title, Year: document.getElementById(displayId).innerText, Poster: m.poster_path, imdbID: m.id.toString(), isFavorite: false });
-            container.appendChild(el);
-        });
     } catch(err) {
-        if(abortController && abortController.signal.aborted) return;
+        if(currentId !== searchCounter) return; 
         container.innerHTML = `<div style="color:#ff0055; text-align:center; margin-top:50px;">CONNECTION ERROR</div>`;
     }
 }
 
-async function fetchTVStatus(id, elementId, start) {
-    try {
-        let data = await fetchSafe(`/tv/${id}?api_key=${TMDB_KEY}`);
-        const el = document.getElementById(elementId);
-        if(el && (data.status === "Ended" || data.status === "Canceled")) {
-            let end = data.last_air_date ? data.last_air_date.split('-')[0] : "";
-            el.innerText = (end && end !== start) ? `${start}-${end}` : start;
-        }
-    } catch(e){}
+function renderSearchResults(data) {
+    const container = document.getElementById('search-results');
+    container.innerHTML = "";
+    let results = data.movie_results || data.tv_results || data.results || [];
+    
+    if(results.length === 0) { container.innerHTML = `<div style="color:#555; text-align:center; margin-top:50px;">NO DATA</div>`; return; }
+
+    results.forEach(m => {
+        if(m.media_type === 'person' || !m.poster_path) return;
+        const el = document.createElement('div'); el.className = 'card';
+        let title = m.title || m.name;
+        let date = m.release_date || m.first_air_date;
+        let year = date ? date.split('-')[0] : "N/A";
+        
+        el.innerHTML = `<img class="card-img" src="${getImg(m.poster_path)}" loading="eager"><div class="card-overlay"><div class="card-title">${title}</div><div class="card-year">${year}</div></div>`;
+        el.onclick = () => addToLibrary({ Title: title, Year: year, Poster: m.poster_path, imdbID: m.id.toString(), isFavorite: false });
+        container.appendChild(el);
+    });
 }
 
 function render() {
@@ -235,7 +253,7 @@ function render() {
     savedMovies.forEach((m, i) => {
         const card = document.createElement('div'); card.className = `card ${selectedIDs.has(m.imdbID)?'selected':''}`;
         let fav = m.isFavorite ? `<div class="fav-marker">♥</div>` : '';
-        card.innerHTML = `${fav}<img class="card-img" src="${getImg(m.Poster,'grid')}" loading="lazy"><div class="card-overlay"><div class="card-title">${m.Title}</div><div class="card-year">${m.Year}</div></div>`;
+        card.innerHTML = `${fav}<img class="card-img" src="${getImg(m.Poster)}" loading="lazy"><div class="card-overlay"><div class="card-title">${m.Title}</div><div class="card-year">${m.Year}</div></div>`;
         if(!isSharedMode) card.ondblclick = (e) => { e.preventDefault(); toggleSel(m.imdbID, card); };
         grid.appendChild(card);
         gsap.from(card, { y:30, opacity:0, duration:0.6, delay: i*0.05 });
@@ -263,14 +281,12 @@ function enterSite() {
     render();
 }
 
-// FIX: COMPLETE CLEANUP ON RETURN
 function returnSite() {
     if(isSharedMode) { window.location.href = location.pathname; return; }
     gsap.to('#app-container', { opacity:0, duration:0.4, onComplete:() => {
         document.getElementById('app-container').style.display='none';
         document.body.style.overflow='hidden'; 
         
-        // CRITICAL FIX: Reset intro state
         const wrap = document.getElementById('ring-wrap');
         const inspector = document.getElementById('inspector');
         wrap.classList.remove('dimmed'); 
@@ -289,34 +305,29 @@ function buildRing() {
     const wrap = document.getElementById('ring-wrap'); 
     wrap.innerHTML = "";
     
-    const list = savedMovies.length ? savedMovies.slice().reverse().slice(0,12) : Array(8).fill({Poster:PLACEHOLDER});
+    let list = savedMovies;
+    if (list.length === 0) list = Array(8).fill({Poster:PLACEHOLDER});
+    else list = savedMovies.slice().reverse().slice(0,12);
+
     const els = list.map((m, i) => {
         const el = document.createElement('div'); el.className = 'ring-item';
         el.style.backgroundImage = `url(${m.Poster && m.Poster.startsWith('/') ? getImg(m.Poster,'grid') : m.Poster})`;
         wrap.appendChild(el);
         const ins = document.getElementById('inspector');
         
-        // FIXED HOVER LOGIC
         el.onmouseenter = () => { 
-            wrap.classList.add('dimmed'); 
-            ins.style.display='block'; 
-            ins.style.backgroundImage = el.style.backgroundImage;
+            wrap.classList.add('dimmed'); ins.style.display='block'; ins.style.backgroundImage = el.style.backgroundImage;
             const rect = el.getBoundingClientRect();
             gsap.set(ins, { x: rect.left+rect.width/2 - window.innerWidth/2, y: rect.top+rect.height/2 - window.innerHeight/2, scale:1 });
             gsap.to(ins, { x: 350, y: 0, scale:2.5, duration:0.4 });
         };
         return el;
     });
-
-    // FIXED MOUSE LEAVE LOGIC
     document.getElementById('inspector').onmouseleave = () => { 
         gsap.to('#inspector', { x:100, scale:0.8, opacity:0, duration:0.3, onComplete:()=>{ 
-            document.getElementById('inspector').style.display='none'; 
-            document.getElementById('inspector').style.opacity=1; 
-            wrap.classList.remove('dimmed'); 
+            document.getElementById('inspector').style.display='none'; document.getElementById('inspector').style.opacity=1; wrap.classList.remove('dimmed'); 
         }}); 
     };
-
     let rot = 0;
     function loop() {
         if(!ringActive) return; rot += 0.0005;
@@ -327,7 +338,6 @@ function buildRing() {
         requestAnimationFrame(loop);
     }
     ringActive = true; loop();
-    gsap.to('#loader', { opacity:0, onComplete:()=>document.getElementById('loader').style.display='none' });
 }
 
 function save() { localStorage.setItem("savedMovies", JSON.stringify(savedMovies)); }
